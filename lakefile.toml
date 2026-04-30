@@ -1,0 +1,11 @@
+name = "Automata"
+version = "0.1.0"
+defaultTargets = ["automata"]
+
+[[lean_lib]]
+name = "Automata"
+root = "Automata"
+
+[[lean_exe]]
+name = "automata"
+root = "Main"
