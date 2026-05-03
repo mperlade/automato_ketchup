@@ -27,5 +27,10 @@ theorem NatCDFA.advanceFrom_concat {a: Nat} {r: NatCDFA a} {q: Fin r.n} {f: List
   | _::_ => List.cons_append ▸ NatCDFA.advanceFrom_concat
 
 
+theorem NatCDFA.advance_concat {a: Nat} {r: NatCDFA a} {f: List (Fin a)} {b: Fin a}:
+    r.advance (f ++ [b]) = r.δ (r.advance f) b :=
+  NatCDFA.advanceFrom_concat
+
+
 def NatCDFA.morphism {a: Nat} (r s: NatCDFA a) (f: Fin r.n → Fin s.n): Prop :=
   ∀ l: List (Fin a), f (r.advance l) = s.advance l ∧ r.accepts l = s.accepts l
