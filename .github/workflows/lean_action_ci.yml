@@ -15,9 +15,19 @@ jobs:
         with:
           use-mathlib-cache: "false"
           check-reservoir-eligibility: "false"
-      - uses: leanprover-community/docgen-action@main
+      - name: Build docs
+        run: |
+          cd docbuild
+          lake update
+          lake build AutoKtchp:docs
+      
+      - name: Prepare pages
+        run: |
+          mkdir -p site
+          cp -r docbuild/.lake/build/doc site/docs
+      
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          lake-package-directory: docbuild
-          api-docs: true
-          build-page: true
-          deploy: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
