@@ -31,7 +31,7 @@ jobs:
         run: |
           cd docbuild
           lake update doc-gen4
-          lake build AutoKtchp:docs
+          lake build AutoKchp:docs
       
       - name: Prepare pages
         run: |
