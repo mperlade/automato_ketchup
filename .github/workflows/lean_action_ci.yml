@@ -12,3 +12,97 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: leanprover/lean-action@v1
+        with:
+          
+          # Automatically configure `lean-action` based on the Lake workspace.
+          # When set to "true", `lean-action` will use the Lake workspace to determine
+          # the set of features to run on the repository, such as `lake build` and `lake test`.
+          # Even when set to "true", the user can still override the auto configuration
+          # with the `build` and `test` inputs.
+          # Allowed values: "true" or "false".
+          # Default: "true"
+          auto-config: ""
+          
+          # Run `lake build`.
+          # Note, this input takes precedence over `auto-config`.
+          # Allowed values: "true" | "false" | "default".
+          build: ""
+      
+          # Run `lake test`.
+          # Note, this input takes precedence over `auto-config`.
+          # Allowed values: "true" | "false" | "default".
+          test: ""
+          
+          # Run `lake lint`.
+          # Note, this input takes precedence over `auto-config`.
+          # Allowed values: "true" | "false" | "default".
+          lint: ""
+      
+          # Check all files are imported with `lake exe mk_all --check`.
+          # Allowed values: "true" | "false".
+          mk_all-check: ""
+      
+          # Build arguments to pass to `lake build {build-args}`.
+          # For example, `build-args: "--quiet"` will run `lake build --quiet`.
+          # By default, `lean-action` calls `lake build` with no arguments.
+          build-args: ""
+      
+          # Test arguments to pass to `lake test {test-args}`.
+          # For example, `test-args: "--quiet"` will run `lake test --quiet`.
+          # By default, `lean-action` calls `lake test` with no arguments.
+          test-args: ""
+      
+          # By default, `lean-action` attempts to automatically detect a Mathlib dependency and run `lake exe cache get` accordingly.
+          # Setting `use-mathlib-cache` will override automatic detection and run (or not run) `lake exe cache get`.
+          # Project must be downstream of Mathlib to use the Mathlib cache.
+          # Allowed values: "true" | "false" | "auto".
+          # Default: "auto"
+          use-mathlib-cache: "true"
+      
+          # Check if the repository is eligible for the Reservoir.
+          # Allowed values: "true" | "false".
+          # Default: "false"
+          check-reservoir-eligibility: "true"
+          
+          # Check environment with leanchecker.
+          # Uses the bundled `leanchecker` binary on Lean `nightly-2026-01-09` / `v4.28.0-rc1`
+          # and newer, and falls back to the external `lean4checker` repository on older versions.
+          # Allowed values: "true" | "false".
+          # Default: "false"
+          leanchecker: ""
+      
+          # Deprecated alias for `leanchecker`.
+          lean4checker: ""
+      
+          # Check environment with nanoda external type checker.
+          # nanoda is an independent Lean 4 type checker written in Rust.
+          # Requires Rust toolchain (will be installed automatically if not present).
+          # Allowed values: "true" | "false".
+          # Default: "false"
+          nanoda: ""
+      
+          # When running nanoda, permit the sorryAx axiom.
+          # Set to "false" if your project should have no sorry placeholders.
+          # Allowed values: "true" | "false".
+          # Default: "true"
+          nanoda-allow-sorry: ""
+      
+          # Enable GitHub caching.
+          # Allowed values: "true" or "false".
+          # If use-github-cache input is not provided, the action will use GitHub caching by default.
+          # Default: "true"
+          use-github-cache: ""
+      
+          # The directory where `lean-action` will look for a Lake package and run `lake build`, etc.
+          # Allowed values: a valid directory containing a Lake package.
+          # If lake-package-directory is not provided, `lean-action` will use the root directory of the repository by default.
+          lake-package-directory: ""
+      
+          # Always reinstall the Lean toolchain if it is a transient one, hosted on the lean4-pr-releases repository.
+          # This ensures that CI always uses the latest build of that toolchain.
+          # This setting only applies to `lean4-pr-releases/pr-release-XXXX` toolchains:
+          # regular Lean toolchain releases remain cached.
+          # The toolchain version is determined from the `lean-toolchain` file.
+          # Allowed values: "true" | "false".
+          # Default: "false"
+          reinstall-transient-toolchain: ""
