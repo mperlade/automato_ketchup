@@ -1,22 +1,12 @@
-import Automata.NatCDFA
-import Automata.Moore
-import Automata.MorphismDfs
+module
 
+public import AutoKchp.NatCDFA
+import AutoKchp.Moore
+import AutoKchp.MorphismDfs
+import AutoKchp.Util
 
 def invertPartition {n: Nat} (p: Partition n): Vector (Option (Fin n)) p.k :=
   Fin.foldl n (fun acc i => acc.set (p.part.get i) i) (Vector.replicate p.k none)
-
-
-theorem Fin.foldl_induction {α} {n: Nat} (motive: α → Nat → Prop)
-  {init: α} (h0: motive init 0) {f: α → Fin n → α}
-  (hr: ∀ (a: α) (i: Fin n), motive a i.val → motive (f a i) i.val.succ):
-    motive (Fin.foldl n f init) n :=
-  match n with
-  | 0 => Fin.foldl_zero _ _ ▸ h0
-  | n + 1 =>
-    have hrec: motive (Fin.foldl n (fun a i => f a i.castSucc) init) n :=
-      Fin.foldl_induction _ h0 (fun a i ha => hr a i.castSucc ha)
-    Fin.foldl_succ_last _ _ ▸ hr _ (last n) hrec
 
 
 theorem invertPartition_correct1 {n: Nat} {p: Partition n}:
@@ -92,7 +82,7 @@ def mooreMinimize {a: Nat} (r: NatCDFA a): Σ s: NatCDFA a, Fin r.n → Fin s.n 
       n := moore.k,
       δ := fun i b => moore.part.get (r.δ (inverse.get i) b)
       i := moore.part.get r.i
-      t := fun i => r.t (inverse.get i)
+      f := fun i => r.f (inverse.get i)
     },
     fun i => moore.part.get i
   ⟩
@@ -115,12 +105,12 @@ theorem mooreMinimize_δ {a: Nat} {r: NatCDFA a} {i: Fin r.n} {b: Fin a}:
 
 
 theorem NatCDFA.t_eq_of_acceptsFrom_eq {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
-    r.acceptsFrom i = r.acceptsFrom j → r.t i = r.t j :=
+    r.acceptsFrom i = r.acceptsFrom j → r.f i = r.f j :=
   fun h => congrFun h []
 
 
 theorem mooreMinimize_t {a: Nat} {r: NatCDFA a} {i: Fin r.n}:
-    (mooreMinimize r).fst.t ((mooreMinimize r).snd i) = r.t i :=
+    (mooreMinimize r).fst.f ((mooreMinimize r).snd i) = r.f i :=
   NatCDFA.t_eq_of_acceptsFrom_eq (computeMoore_correct.mp
     (invertNormalizedPartition_rel _ i))
 
@@ -144,9 +134,9 @@ theorem mooreMinimize_morphism {a: Nat} {r: NatCDFA a}:
     NatCDFA.morphism r _ (mooreMinimize r).snd :=
   fun l => ⟨
     mooreMinimize_advance.symm,
-    have concl: r.t (r.advanceFrom r.i l) =
-        (mooreMinimize r).fst.t ((mooreMinimize r).fst.advanceFrom (mooreMinimize r).fst.i l) :=
-      mooreMinimize_t ▸ congrArg (mooreMinimize r).fst.t mooreMinimize_advanceFrom.symm
+    have concl: r.f (r.advanceFrom r.i l) =
+        (mooreMinimize r).fst.f ((mooreMinimize r).fst.advanceFrom (mooreMinimize r).fst.i l) :=
+      mooreMinimize_t ▸ congrArg (mooreMinimize r).fst.f mooreMinimize_advanceFrom.symm
     concl
   ⟩
 
@@ -158,18 +148,18 @@ theorem mooreMinimize_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
 
 theorem mooreMinimize_minimal {a: Nat} {r: NatCDFA a}:
     (mooreMinimize r).fst.minimal := fun s hs =>
-  match findMorphism s (mooreMinimize r).fst with
-  | FindMorphismResult.morphism f hf => ⟨f, hf⟩
-  | FindMorphismResult.obstruction obs => match obs with
-    | MorphismObstruction.final l hl => False.elim (hl (congrFun hs l))
-    | MorphismObstruction.state l1 l2 hs2 hmr => False.elim (hmr (
+  match s.findMorphism (mooreMinimize r).fst with
+  | NatCDFA.FindMorphismResult.morphism f hf => ⟨f, hf⟩
+  | NatCDFA.FindMorphismResult.obstruction obs => match obs with
+    | NatCDFA.MorphismObstruction.final l hl => False.elim (hl (congrFun hs l))
+    | NatCDFA.MorphismObstruction.state l1 l2 hs2 hmr => False.elim (hmr (
       have h: r.acceptsFrom (r.advance l1) = r.acceptsFrom (r.advance l2) := funext fun l =>
         NatCDFA.acceptsFrom.eq_def _ (r.advance l1) _ ▸
         NatCDFA.acceptsFrom.eq_def _ (r.advance l2) _ ▸
           NatCDFA.advanceFrom_append (f₁ := l1) ▸
           NatCDFA.advanceFrom_append (f₁ := l2) ▸
             (((mooreMinimize_morphism (r := r)) (l1 ++ l)).right.trans
-              (hs ▸ congrArg s.t (
+              (hs ▸ congrArg s.f (
                   NatCDFA.advanceFrom_append (f₁ := l1) ▸
                   NatCDFA.advanceFrom_append (f₁ := l2) ▸
                 congrArg (fun w => s.advanceFrom w l) hs2
@@ -179,19 +169,21 @@ theorem mooreMinimize_minimal {a: Nat} {r: NatCDFA a}:
         (mooreMinimize_correct.mpr h)).trans (mooreMinimize_morphism l2).left
     ))
 
+public section
+namespace NatCDFA
 
-structure NatCDFA.MinimizationResult {a: Nat} (r: NatCDFA a) where
+structure MinimizationResult {a: Nat} (r: NatCDFA a) where
   minimized: NatCDFA a
-  f: Fin r.n → Fin minimized.n
-  morphism: NatCDFA.morphism r minimized f
+  m: Fin r.n → Fin minimized.n
+  morphism: NatCDFA.morphism r minimized m
   correct: minimized.minimal
 
 
-def NatCDFA.minimize {a: Nat} (r: NatCDFA a): NatCDFA.MinimizationResult r :=
+def minimize {a: Nat} (r: NatCDFA a): NatCDFA.MinimizationResult r :=
   let m := mooreMinimize r
   {
     minimized := m.fst.concretize,
-    f := m.snd,
+    m := m.snd,
     morphism :=
       have eq: m.fst.concretize = m.fst := concretize_id
       have morphism_heq: r.morphism m.fst.concretize ≍ r.morphism m.fst :=
@@ -199,3 +191,6 @@ def NatCDFA.minimize {a: Nat} (r: NatCDFA a): NatCDFA.MinimizationResult r :=
       Eq.mpr (congrFun (eq_of_heq morphism_heq) m.snd) mooreMinimize_morphism
     correct := concretize_id ▸ mooreMinimize_minimal,
   }
+
+end NatCDFA
+end

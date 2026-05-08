@@ -1,11 +1,7 @@
-name = "Automata"
+name = "automato_ketchup"
 version = "0.1.0"
-defaultTargets = ["automata"]
 
 [[lean_lib]]
-name = "Automata"
-root = "Automata"
+name = "AutoKchp"
+root = "AutoKchp"
 
-[[lean_exe]]
-name = "automata"
-root = "Main"

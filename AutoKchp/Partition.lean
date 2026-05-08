@@ -1,30 +1,35 @@
-import Automata.Dedup
-import Automata.Counting
-import Automata.Util
+module
 
-structure Partition (n: Nat) where
+import AutoKchp.Dedup
+public import AutoKchp.Counting
+import AutoKchp.Util
+
+public structure Partition (n: Nat) where
   k: Nat
   part: Vector (Fin k) n
 
 
-def Partition.rel {n: Nat} (p: Partition n):
+namespace Partition
+
+@[expose]
+public def rel {n: Nat} (p: Partition n):
     Fin n → Fin n → Prop :=
   fun i j => p.part.get i = p.part.get j
 
 
-theorem Partition.zero_lt {n: Nat} {p: Partition n} (h: n ≠ 0):
+theorem zero_lt {n: Nat} {p: Partition n} (h: n ≠ 0):
     0 < p.k :=
   Nat.zero_lt_of_lt (p.part.get ⟨0, Nat.zero_lt_of_ne_zero h⟩).isLt
 
 
-def Partition.intersection {n: Nat} (s: Nat) (f: Nat → Partition n): Partition n :=
+public def intersection {n: Nat} (s: Nat) (f: Nat → Partition n): Partition n :=
   if eq: n = 0 then
     {
       k := 0,
       part := Vector.mk #[] eq.symm
     }
   else
-    let f := fun i r => (f r).part.getD i ⟨0, Partition.zero_lt eq⟩
+    let f := fun i r => (f r).part.getD i ⟨0, zero_lt eq⟩
     let result := radixDedup f n s
     {
       k := result.snd,
@@ -34,13 +39,13 @@ def Partition.intersection {n: Nat} (s: Nat) (f: Nat → Partition n): Partition
     }
 
 
-theorem Partition.intersection_nnnz {n: Nat} {s: Nat} {f: Nat → Partition n} (h: n ≠ 0):
-    (Partition.intersection s f).part.toArray.map Fin.val =
-    (radixDedup (fun i r => (f r).part.getD i ⟨0, Partition.zero_lt h⟩) n s).fst :=
+theorem intersection_nnnz {n: Nat} {s: Nat} {f: Nat → Partition n} (h: n ≠ 0):
+    (intersection s f).part.toArray.map Fin.val =
+    (radixDedup (fun i r => (f r).part.getD i ⟨0, zero_lt h⟩) n s).fst :=
   let rdd: Array Nat :=
-    (radixDedup (fun i r => (f r).part.getD i ⟨0, Partition.zero_lt h⟩) n s).fst
+    (radixDedup (fun i r => (f r).part.getD i ⟨0, zero_lt h⟩) n s).fst
   let k: Nat :=
-    (radixDedup (fun i r => (f r).part.getD i ⟨0, Partition.zero_lt h⟩) n s).snd
+    (radixDedup (fun i r => (f r).part.getD i ⟨0, zero_lt h⟩) n s).snd
   have concl: (rdd.pmap (α := Nat) (β := Fin k)
         (fun a ha => ⟨a, radixDedup_lt ha⟩) (fun _ => id)
       ).map Fin.val = rdd :=
@@ -48,32 +53,32 @@ theorem Partition.intersection_nnnz {n: Nat} {s: Nat} {f: Nat → Partition n} (
   intersection.eq_def _ _ ▸ dite_cond_eq_false (eq_false h) ▸ concl
 
 
-theorem Partition.intersection_nnnz_k {n: Nat} {s: Nat} {f: Nat → Partition n} (h: n ≠ 0):
-    (Partition.intersection s f).k =
-    (radixDedup (fun i r => (f r).part.getD i ⟨0, Partition.zero_lt h⟩) n s).snd :=
+theorem intersection_nnnz_k {n: Nat} {s: Nat} {f: Nat → Partition n} (h: n ≠ 0):
+    (intersection s f).k =
+    (radixDedup (fun i r => (f r).part.getD i ⟨0, zero_lt h⟩) n s).snd :=
   congrArg k (dite_cond_eq_false (eq_false h))
 
 
-theorem Partition.rel_get_simpl {n: Nat} {p: Partition n} {i j: Fin n}:
+theorem rel_get_simpl {n: Nat} {p: Partition n} {i j: Fin n}:
     p.rel i j ↔ (p.part.toArray.map Fin.val)[i.val] = (p.part.toArray.map Fin.val)[j.val] :=
   Array.getElem_map Fin.val _ (i := i) ▸ Array.getElem_map Fin.val _ (i := j) ▸
     Fin.val_inj.symm
 
 
-theorem Partition.intersection_correct {n: Nat} {s: Nat} {f: Nat → Partition n} {i j: Fin n}:
-    (Partition.intersection s f).rel i j ↔ ∀ r: Nat, r < s → (f r).rel i j :=
+public theorem intersection_correct {n: Nat} {s: Nat} {f: Nat → Partition n} {i j: Fin n}:
+    (intersection s f).rel i j ↔ ∀ r: Nat, r < s → (f r).rel i j :=
   if eq: n = 0 then
     False.elim (Nat.not_lt_zero i (eq ▸ i.isLt))
   else
-    let fin_zero (r: Nat): Fin (f r).k := ⟨0, Partition.zero_lt eq⟩
+    let fin_zero (r: Nat): Fin (f r).k := ⟨0, zero_lt eq⟩
     have size_eq: (radixDedup (fun i r => (f r).part.getD i (fin_zero r)) n s).fst.size = n :=
       size_radixDedup
-    have simpl: (Partition.intersection s f).rel i j ↔
+    have simpl: (intersection s f).rel i j ↔
         (radixDedup (fun i r => (f r).part.getD i (fin_zero r)) n s).fst[i.val] =
         (radixDedup (fun i r => (f r).part.getD i (fin_zero r)) n s).fst[j.val] :=
-      Iff.trans Partition.rel_get_simpl (
-        (getElem_congr_coll (idx := Nat) (i := i.val) (Partition.intersection_nnnz eq)).symm ▸
-        (getElem_congr_coll (idx := Nat) (i := j.val) (Partition.intersection_nnnz eq)).symm ▸
+      Iff.trans rel_get_simpl (
+        (getElem_congr_coll (idx := Nat) (i := i.val) (intersection_nnnz eq)).symm ▸
+        (getElem_congr_coll (idx := Nat) (i := j.val) (intersection_nnnz eq)).symm ▸
         Iff.refl _)
     have getD_eq_i (r: Nat): (f r).part.get i = (f r).part.getD i (fin_zero r) :=
       Array.getElem_eq_getD _
@@ -90,42 +95,46 @@ theorem Partition.intersection_correct {n: Nat} {s: Nat} {f: Nat → Partition n
       ⟩)
 
 
-def Partition.normalized {n: Nat} (p: Partition n): Prop := ∀ i: Fin p.k, i ∈ p.part
+@[expose]
+public def normalized {n: Nat} (p: Partition n): Prop := ∀ i: Fin p.k, i ∈ p.part
 
 
-theorem Partition.intersection_normalized {n: Nat} {s: Nat} {f: Nat → Partition n}:
-    (Partition.intersection s f).normalized := fun i =>
+public theorem intersection_normalized {n: Nat} {s: Nat} {f: Nat → Partition n}:
+    (intersection s f).normalized := fun i =>
   if eq: n = 0 then
-    have k_eq: (Partition.intersection s f).k = 0 :=
-      Eq.trans (congrArg Partition.k (dite_cond_eq_true (eq_true eq))) rfl
+    have k_eq: (intersection s f).k = 0 :=
+      Eq.trans (congrArg k (dite_cond_eq_true (eq_true eq))) rfl
     False.elim (Nat.not_lt_zero i.val (Nat.lt_of_lt_of_eq i.isLt k_eq))
   else
     have mem: i.val ∈ (intersection s f).part.toArray.map Fin.val :=
     have h: i.val < (radixDedup (fun i r => (f r).part.getD i ⟨0, _⟩) n s).snd :=
-      Nat.lt_of_lt_of_eq i.isLt (Partition.intersection_nnnz_k eq)
+      Nat.lt_of_lt_of_eq i.isLt (intersection_nnnz_k eq)
     intersection_nnnz eq ▸ radixDedup_normalized h
     have ⟨_, ha, eqa⟩ := Array.mem_map.mp mem
     (Vector.mem_toArray_iff i _).mp ((Fin.val_inj.mp eqa) ▸ ha)
 
 
-def Partition.card {n: Nat} (p: Partition n): Nat := (p.part.map Fin.val).toList.card
+@[expose]
+public def card {n: Nat} (p: Partition n): Nat := (p.part.map Fin.val).toList.card
 
 
-theorem Partition.card_normalized {n: Nat} {p: Partition n} (h: p.normalized):
+public theorem card_normalized {n: Nat} {p: Partition n} (h: p.normalized):
     p.card = p.k :=
-  have le1: p.card ≤ p.k := card_at_most (fun _ hi =>
+  have le1: p.card ≤ p.k := List.card_at_most (fun _ hi =>
     have ⟨a, _, eq⟩ := Vector.mem_map.mp (Vector.mem_toList_iff.mp hi); eq ▸ a.isLt)
-  have le2: p.k ≤ p.card := card_at_least (fun i hi =>
+  have le2: p.k ≤ p.card := List.card_at_least (fun i hi =>
     Vector.mem_toList_iff.mpr (Vector.mem_map.mpr ⟨⟨i, hi⟩, h _, rfl⟩))
   Nat.le_antisymm le1 le2
 
 
-theorem Partition.card_le_n {n: Nat} {p: Partition n}:
+public theorem card_le_n {n: Nat} {p: Partition n}:
     p.card ≤ n :=
   Nat.le_trans List.card_le_length (Nat.le_of_eq Vector.length_toList)
 
+end Partition
+
 /-
-Lemmas to prove that Partition.card is an antitone function of Partition.rel
+Lemmas to prove that card is an antitone function of rel
 -/
 def card_rel (r: Nat → Nat → Bool): Nat → Nat
   | 0 => 0
@@ -235,7 +244,33 @@ theorem card_fun_rel {α} [d: DecidableEq α] {f: Nat → α} {n: Nat}:
     ⟩) (fun _ => card_fun_rel) (fun _ => congrArg (· + 1) card_fun_rel)
 
 
-theorem Partition.card_eq_card_fun {n: Nat} {p: Partition n}:
+theorem rel_fun_rel_imp {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
+    ∀ i j: Nat, decide (p.part[i]? = p.part[j]?) → decide (q.part[i]? = q.part[j]?) :=
+  fun i j rel =>
+    have rel := of_decide_eq_true rel
+    if hi: i < n then
+      have ⟨hj, eq⟩ := Vector.getElem?_eq_some_iff.mp
+        (Vector.getElem?_eq_getElem hi ▸ rel).symm
+      decide_eq_true ((Vector.getElem?_eq_getElem hi ▸ Vector.getElem?_eq_getElem hj ▸
+        congrArg some (h ⟨i, hi⟩ ⟨j, hj⟩ eq.symm)))
+    else
+      have hi: n ≤ i := Nat.le_of_not_lt hi
+      have hj: n ≤ j := Vector.getElem?_eq_none_iff.mp
+        (Vector.getElem?_eq_none hi ▸ rel).symm
+      decide_eq_true ((Vector.getElem?_eq_none hi) ▸ (Vector.getElem?_eq_none hj) ▸ rfl)
+
+
+theorem fun_rel_equiv {n: Nat} {p: Partition n}:
+    BEquivalence fun i j => decide (p.part[i]? = p.part[j]?) := {
+  refl := fun _ => decide_eq_true rfl
+  symm := fun _ _ h => decide_eq_true (of_decide_eq_true h).symm
+  trans := fun _ _ _ h1 h2 => decide_eq_true ((of_decide_eq_true h1).trans (of_decide_eq_true h2))
+}
+
+
+namespace Partition
+
+theorem card_eq_card_fun {n: Nat} {p: Partition n}:
     p.card = card_fun (fun i => p.part[i]?) n :=
   (List.card_map_inj some
     (fun _ _ => Option.some_inj.mp)).symm.trans
@@ -259,47 +294,23 @@ theorem Partition.card_eq_card_fun {n: Nat} {p: Partition n}:
     (fun _ _ => (Option.map_inj_right fun _ _ => Fin.val_inj.mp).mp)))
 
 
-theorem Partition.card_eq_card_rel {n: Nat} {p: Partition n}:
+theorem card_eq_card_rel {n: Nat} {p: Partition n}:
     p.card = card_rel (fun i j => p.part[i]? = p.part[j]?) n :=
-  Partition.card_eq_card_fun.trans card_fun_rel
+  card_eq_card_fun.trans card_fun_rel
 
 
-theorem rel_fun_rel_imp {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
-    ∀ i j: Nat, decide (p.part[i]? = p.part[j]?) → decide (q.part[i]? = q.part[j]?) :=
-  fun i j rel =>
-    have rel := of_decide_eq_true rel
-    if hi: i < n then
-      have ⟨hj, eq⟩ := Vector.getElem?_eq_some_iff.mp
-        (Vector.getElem?_eq_getElem hi ▸ rel).symm
-      decide_eq_true ((Vector.getElem?_eq_getElem hi ▸ Vector.getElem?_eq_getElem hj ▸
-        congrArg some (h ⟨i, hi⟩ ⟨j, hj⟩ eq.symm)))
-    else
-      have hi: n ≤ i := Nat.le_of_not_lt hi
-      have hj: n ≤ j := Vector.getElem?_eq_none_iff.mp
-        (Vector.getElem?_eq_none hi ▸ rel).symm
-      decide_eq_true ((Vector.getElem?_eq_none hi) ▸ (Vector.getElem?_eq_none hj) ▸ rfl)
-
-
-theorem Partition.card_anti {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
+theorem card_anti {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
     q.card ≤ p.card :=
-  (Partition.card_eq_card_rel (p := q)) ▸
-  (Partition.card_eq_card_rel (p := p)) ▸
+  (card_eq_card_rel (p := q)) ▸
+  (card_eq_card_rel (p := p)) ▸
   card_rel_anti (rel_fun_rel_imp h)
 
 
-theorem fun_rel_equiv {n: Nat} {p: Partition n}:
-    BEquivalence fun i j => decide (p.part[i]? = p.part[j]?) := {
-  refl := fun _ => decide_eq_true rfl
-  symm := fun _ _ h => decide_eq_true (of_decide_eq_true h).symm
-  trans := fun _ _ _ h1 h2 => decide_eq_true ((of_decide_eq_true h1).trans (of_decide_eq_true h2))
-}
-
-
-theorem Partition.card_anti_eq {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
+theorem card_anti_eq {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i j → q.rel i j):
     q.card = p.card → q.rel = p.rel := fun eq =>
   have concl := card_rel_anti_eq (rel_fun_rel_imp h) fun_rel_equiv fun_rel_equiv
-    ((Partition.card_eq_card_rel (p := q)) ▸
-    (Partition.card_eq_card_rel (p := p)) ▸ eq)
+    ((card_eq_card_rel (p := q)) ▸
+    (card_eq_card_rel (p := p)) ▸ eq)
   funext (fun i => funext (fun j => propext (
     ⟨
       (fun rel =>
@@ -313,14 +324,14 @@ theorem Partition.card_anti_eq {n: Nat} {p q: Partition n} (h: ∀ i j, p.rel i 
   )))
 
 
-theorem Partition.intersection_card_ge {n: Nat} {s: Nat} {f: Nat → Partition n} {i: Nat} (hi: i < s):
+public theorem intersection_card_ge {n: Nat} {s: Nat} {f: Nat → Partition n} {i: Nat} (hi: i < s):
     (f i).card ≤ (intersection s f).card :=
-  Partition.card_anti (fun _ _ h => Partition.intersection_correct.mp h i hi)
+  card_anti (fun _ _ h => intersection_correct.mp h i hi)
 
 
-theorem Partition.of_intersection_card_eq {n: Nat} {s: Nat} {f: Nat → Partition n} {i: Nat} (hi: i < s):
+public theorem of_intersection_card_eq {n: Nat} {s: Nat} {f: Nat → Partition n} {i: Nat} (hi: i < s):
     (f i).card = (intersection s f).card → (f i).rel = (intersection s f).rel :=
-  fun eq => Partition.card_anti_eq (fun _ _ h => Partition.intersection_correct.mp h i hi) eq
+  fun eq => card_anti_eq (fun _ _ h => intersection_correct.mp h i hi) eq
 
 /-
 Create a normalized partition from a binary predicate
@@ -347,23 +358,25 @@ theorem bool_eq_iff_ite_01_eq {a b: Bool}:
 
 theorem predPart_correct {n: Nat} {p: Fin n → Bool} {i j: Fin n}:
     (predPart p).rel i j ↔ p i = p j :=
-  Partition.rel.eq_def _ _ _ ▸ Vector.get_ofFn ▸ Vector.get_ofFn ▸
+  rel.eq_def _ _ _ ▸ Vector.get_ofFn ▸ Vector.get_ofFn ▸
     bool_eq_iff_ite_01_eq.symm
 
 
-def Partition.predPartNormalized {n: Nat} (p: Fin n → Bool): Partition n :=
+public def predPartNormalized {n: Nat} (p: Fin n → Bool): Partition n :=
   let part := predPart p
-  Partition.intersection 1 (fun _ => part)
+  intersection 1 (fun _ => part)
 
 
-theorem Partition.predPartNormalized_correct {n: Nat} {p: Fin n → Bool} {i j: Fin n}:
-    (Partition.predPartNormalized p).rel i j ↔ p i = p j :=
-  Partition.intersection_correct.trans ⟨
+public theorem predPartNormalized_correct {n: Nat} {p: Fin n → Bool} {i j: Fin n}:
+    (predPartNormalized p).rel i j ↔ p i = p j :=
+  intersection_correct.trans ⟨
     fun h => predPart_correct.mp (h 0 Nat.zero_lt_one),
     fun h => (fun _ _ => predPart_correct.mpr h)
   ⟩
 
 
-theorem Partition.predPartNormalized_normalized {n: Nat} {p: Fin n → Bool}:
-    (Partition.predPartNormalized p).normalized :=
-  Partition.intersection_normalized
+public theorem predPartNormalized_normalized {n: Nat} {p: Fin n → Bool}:
+    (predPartNormalized p).normalized :=
+  intersection_normalized
+
+end Partition

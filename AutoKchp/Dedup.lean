@@ -1,4 +1,7 @@
-import Automata.RadixSort
+module
+
+public import AutoKchp.RadixSort
+import AutoKchp.Util
 
 /-
 Construction of an array of new indices
@@ -211,23 +214,20 @@ theorem nat_continuity {f: Nat → Nat} (h: ∀ i: Nat, f (i + 1) = f i ∨ f (i
         ⟨k, Nat.le_trans hk (Nat.le.intro rfl), eqk⟩
 
 
-theorem Array.getD_eq_default {α} (v: Array α) (d: α) {n: Nat} (h: v.size ≤ n): v.getD n d = d :=
-  dite_cond_eq_false (eq_false (Nat.not_lt_of_le h))
-
-
 theorem nat_continuty_array {v: Array Nat} (hv: v.size > 0) {j: Nat} (hj1: v[0] ≤ j) (hj2: j ≤ v.back)
   (h: ∀ i: Nat, (hi: i + 1 < v.size) → v[i + 1] = v[i] ∨ v[i + 1] = v[i] + 1):
     j ∈ v :=
   let f (i: Nat) := v.getD i v.back
   have fst: f 0 = v[0] := (Array.getElem_eq_getD v.back).symm
-  have lst: f (v.size - 1) = v.back := (Array.getElem_eq_getD v.back).symm
+  have lst: f (v.size - 1) = v.back := Array.back_eq_getElem _ ▸ (Array.getElem_eq_getD v.back).symm
   have ⟨k, hk, eq⟩ := nat_continuity
     (fun i => if hi: i + 1 < v.size then
       (Array.getElem_eq_getD v.back (i := i)) ▸ (Array.getElem_eq_getD v.back (i := i + 1)) ▸ (h i hi)
     else Or.inl (if hi2: i + 1 = v.size then
       have ilt: i < v.size := hi2 ▸ Nat.lt_succ_self i
       (Array.getD_eq_default v v.back (Nat.le_of_eq hi2.symm)).trans
-        (Eq.trans (getElem_congr_idx (Nat.pred_eq_of_eq_succ hi2.symm)) (Array.getElem_eq_getD v.back))
+        (Eq.trans (Array.back_eq_getElem _ ▸ getElem_congr_idx (Nat.pred_eq_of_eq_succ hi2.symm))
+          (Array.getElem_eq_getD v.back))
     else
       have lei: v.size ≤ i := Nat.le_of_lt_succ (Nat.lt_of_le_of_ne (Nat.le_of_not_lt hi) (Ne.symm hi2))
       Eq.trans (Array.getD_eq_default v v.back (Nat.le_succ_of_le lei)) (Array.getD_eq_default v v.back lei).symm
@@ -471,23 +471,23 @@ theorem mem_of_mem_composeInvFrom {v w: Array Nat} {h: v.size = w.size} {acc: Ar
 
 
 -- v ∘ w^-1 (w assumed to be a permutation)
-def Array.composeInv (v w: Array Nat) (h: v.size = w.size): Array Nat :=
+def composeInv (v w: Array Nat) (h: v.size = w.size): Array Nat :=
   composeInvFrom v w h (Array.replicate w.size 0) 0
 
 
 theorem size_composeInv {v w: Array Nat} {h: v.size = w.size}:
-    (Array.composeInv v w h).size = w.size :=
+    (composeInv v w h).size = w.size :=
   Eq.trans size_composeInvFrom Array.size_replicate
 
 
 theorem getElem_composeInv {v w: Array Nat} {h: v.size = w.size} {i: Nat}
   (hi: i < w.size) (h2: w[i] < w.size) (h3: w.toList.Nodup):
-    (Array.composeInv v w h)[w[i]]'(size_composeInv ▸ h2) = v[i] :=
+    (composeInv v w h)[w[i]]'(size_composeInv ▸ h2) = v[i] :=
   composeInvFrom_getElem_lt hi (Array.size_replicate ▸ h2) h3 (Nat.zero_le _)
 
 
 theorem mem_of_mem_composeInv {v w: Array Nat} {h: v.size = w.size} {i: Nat}
-  (h: i ∈ Array.composeInv v w h): i = 0 ∨ i ∈ v :=
+  (h: i ∈ composeInv v w h): i = 0 ∨ i ∈ v :=
   match mem_of_mem_composeInvFrom h with
   | .inl mem_acc => Or.inl (Array.eq_of_mem_replicate mem_acc)
   | .inr mem_v => Or.inr mem_v
@@ -532,22 +532,22 @@ theorem adjLexR_iff {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)}
 
 
 --Returns the new indices, as well as one above the largest
-def radixDedup {radix: Nat → Nat} (f: Nat → (r: Nat) → Fin (radix r)) (n s: Nat): Array Nat × Nat :=
+public def radixDedup {radix: Nat → Nat} (f: Nat → (r: Nat) → Fin (radix r)) (n s: Nat): Array Nat × Nat :=
   let sort := radixSort f n s
   let reindexed := reindex (adjLexEqR f sort s) n
   (
-    Array.composeInv reindexed sort (Eq.trans size_reindex radixSort_size.symm),
+    composeInv reindexed sort (Eq.trans size_reindex radixSort_size.symm),
     (reindexed.back?.map (· + 1)).getD 0
   )
 
 
-theorem size_radixDedup {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat}:
+public theorem size_radixDedup {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat}:
     (radixDedup f n s).fst.size = n :=
   Eq.trans size_composeInv radixSort_size
 
 
 --Putting all the pieces together (in a bit of an ugly way)
-theorem radixDedup_correct {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat}
+public theorem radixDedup_correct {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat}
   {i j: Nat} (hi: i < n) (hj: j < n):
     (radixDedup f n s).fst[i]'(size_radixDedup ▸ hi) = (radixDedup f n s).fst[j]'(size_radixDedup ▸ hj)
     ↔ lexEq (f i) (f j) s :=
@@ -560,7 +560,7 @@ theorem radixDedup_correct {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (ra
   have ci_h: (reindex (adjLexEqR f (radixSort f n s) s) n).size = (radixSort f n s).size :=
       Eq.trans size_reindex radixSort_size.symm
   have get_i:
-      ((reindex (adjLexEqR f (radixSort f n s) s) n).composeInv (radixSort f n s) ci_h)[i]'
+      (composeInv (reindex (adjLexEqR f (radixSort f n s) s) n) (radixSort f n s) ci_h)[i]'
         (size_composeInv.symm ▸ radixSort_size ▸ hi) =
       (reindex (adjLexEqR f (radixSort f n s) s) n)[ii]'
         (size_reindex ▸ hii) :=
@@ -570,7 +570,7 @@ theorem radixDedup_correct {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (ra
       Nat.lt_of_lt_of_eq ineq radixSort_size.symm
     ) radixSort_nodup
   have get_j:
-      ((reindex (adjLexEqR f (radixSort f n s) s) n).composeInv (radixSort f n s) ci_h)[j]'
+      (composeInv (reindex (adjLexEqR f (radixSort f n s) s) n) (radixSort f n s) ci_h)[j]'
         (size_composeInv.symm ▸ radixSort_size ▸ hj) =
       (reindex (adjLexEqR f (radixSort f n s) s) n)[ij]'
         (size_reindex ▸ hij) :=
@@ -612,7 +612,7 @@ theorem radixDedup_correct {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (ra
   ))
 
 
-theorem radixDedup_lt {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat} {i: Nat}
+public theorem radixDedup_lt {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat} {i: Nat}
   (h: i ∈ (radixDedup f n s).fst): i < (radixDedup f n s).snd :=
   have rdx_size: (radixSort f n s).size = n := radixSort_size
   have nnnz: 0 < n := Nat.lt_of_lt_of_eq (size_composeInv ▸ Array.size_pos_of_mem h) rdx_size
@@ -638,11 +638,7 @@ theorem radixDedup_lt {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r
   c2
 
 
-theorem Array.back?_eq_back {α} {v: Array α} (h: 0 < v.size): v.back? = some v.back :=
-  getElem?_eq_getElem (Nat.sub_one_lt_of_lt h)
-
-
-theorem radixDedup_normalized {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat} {i: Nat}
+public theorem radixDedup_normalized {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin (radix r)} {n s: Nat} {i: Nat}
   (h: i < (radixDedup f n s).snd): i ∈ (radixDedup f n s).fst :=
   have rdx_size: (radixSort f n s).size = n := radixSort_size
   have h: i < (Option.map (fun x => x + 1) (reindex (adjLexEqR f (radixSort f n s) s) n).back?).getD 0 := h
@@ -650,7 +646,7 @@ theorem radixDedup_normalized {radix: Nat → Nat} {f: Nat → (r: Nat) → Fin 
     have reindex_empty: reindex (adjLexEqR f (radixSort f n s) s) n = #[] :=
       Array.eq_empty_of_size_eq_zero (size_reindex.trans zero)
     Nat.not_lt_zero i (Nat.lt_of_lt_of_eq (reindex_empty ▸ h)
-      (rfl: (Option.map (fun x => x + 1) #[].back?).getD 0 = 0)))
+      (Array.back?_eq_getElem? ▸ rfl: (Option.map (fun x => x + 1) #[].back?).getD 0 = 0)))
   have h': i < ((some ((reindex (adjLexEqR f (radixSort f n s) s) n).back _)).map (· + 1)).getD 0 :=
     Array.back?_eq_back (Nat.lt_of_lt_of_eq nnnz size_reindex.symm) ▸ h
   have mem: i ∈ reindex (adjLexEqR f (radixSort f n s) s) n := reindex_surj nnnz

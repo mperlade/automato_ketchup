@@ -1,6 +1,8 @@
-import Automata.NatCDFA
-import Automata.Partition
+module
 
+public import AutoKchp.NatCDFA
+public import AutoKchp.Partition
+import AutoKchp.Util
 
 def nextPartition {a: Nat} (r: NatCDFA a) (p: Partition r.n) (b: Fin a): Partition r.n := {
   k := p.k,
@@ -62,11 +64,11 @@ theorem refinePartition_correct {a: Nat} {r: NatCDFA a} {p: Partition r.n} {i j:
   ⟩
 
 
-def terminalPartition {a: Nat} (r: NatCDFA a): Partition r.n := Partition.predPartNormalized r.t
+def terminalPartition {a: Nat} (r: NatCDFA a): Partition r.n := Partition.predPartNormalized r.f
 
 
 theorem terminalPartition_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
-    (terminalPartition r).rel i j ↔ r.t i = r.t j :=
+    (terminalPartition r).rel i j ↔ r.f i = r.f j :=
   Partition.predPartNormalized_correct
 
 
@@ -141,7 +143,7 @@ theorem computeMooreFrom_normalized {a: Nat} {r: NatCDFA a} {p: Partition r.n} {
   decreasing_by case _ _ h => exact computeMooreFrom_decreasing hn h
 
 
-def computeMoore {a: Nat} (r: NatCDFA a): Partition r.n :=
+public def computeMoore {a: Nat} (r: NatCDFA a): Partition r.n :=
   computeMooreFrom r (terminalPartition r) terminalPartition_normalized
 
 
@@ -171,7 +173,7 @@ theorem computeMoore_correct2 {a: Nat} {r: NatCDFA a} {i j: Fin r.n} (h: (comput
     ((refinePartition_correct.mp (Eq.subst (motive := fun w => w i j) computeMoore_fix h)).left b)
 
 
-theorem computeMoore_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
+public theorem computeMoore_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
     (computeMoore r).rel i j ↔ r.acceptsFrom i = r.acceptsFrom j :=
   ⟨
     fun h => funext (fun _ => computeMoore_correct2 h),
@@ -179,6 +181,6 @@ theorem computeMoore_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
   ⟩
 
 
-theorem computeMoore_normalized {a: Nat} {r: NatCDFA a}:
+public theorem computeMoore_normalized {a: Nat} {r: NatCDFA a}:
     (computeMoore r).normalized :=
   computeMooreFrom_normalized

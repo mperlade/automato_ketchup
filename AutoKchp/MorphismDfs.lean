@@ -1,23 +1,11 @@
-import Automata.NatCDFA
-import Automata.RadixSort
+module
+
+public import AutoKchp.NatCDFA
+import AutoKchp.Util
 
 /-
 DFS to find a "state morphism" (which does not necessarily map terminal states to terminal states)
 -/
-def Vector.cNone {α} {n: Nat} (v: Vector (Option α) n) := v.countP Option.isNone
-
-
-theorem Vector.cNone_set {α} {n: Nat} {v: Vector (Option α) n} {i: Fin n} {x: α}
-  (h: v.get i = none):
-    (v.set i x).cNone + 1 = v.cNone :=
-  have cond: v[i.val].isNone = true := Option.isNone_iff_eq_none.mpr h
-  have le: v.countP Option.isNone ≥ 1 := Nat.one_le_of_lt (Vector.countP_pos_iff.mpr
-    ⟨v.get i, Vector.getElem_mem _, Option.isNone_iff_eq_none.mpr h⟩)
-  (congrArg (· + 1) (Vector.countP_set i.isLt)).trans (
-    ite_cond_eq_true _ _ (eq_true cond) ▸ Nat.sub_add_comm le ▸
-    (Nat.sub_add_cancel (Nat.le_add_right_of_le le)).symm ▸ rfl)
-
-
 abbrev DFSTable {a: Nat} (r s: NatCDFA a) := Vector (Option (Fin s.n × List (Fin a))) r.n
 
 
@@ -37,70 +25,6 @@ def dfsFindMorphismFrom {a: Nat} (r s: NatCDFA a) (p: Fin r.n) (q: Fin s.n)
       (fun acc b => dfsFindMorphismFrom r s (r.δ p b) (s.δ q b) (b::l) acc fuel)
       (asgn.set p (some (q, l)))
     | some (q', l') => if q' = q then Except.ok asgn else Except.error (l.reverse, l'.reverse)
-
-
-theorem Fin.foldlM_induction {α m} [Monad m] [LawfulMonad m] {n: Nat} (motive: m α → Nat → Prop)
-  {init: α} (h0: motive (pure init) 0) {f: α → Fin n → m α}
-  (hr: ∀ (a: m α) (i: Fin n), motive a i.val → motive (a >>= (f · i)) i.val.succ):
-    motive (Fin.foldlM n f init) n :=
-  match n with
-  | 0 =>  (congrFun (Fin.foldlM_zero f) init).symm.subst (motive := fun w => motive w 0) h0
-  | n + 1 =>
-    have hrec: motive (Fin.foldlM n (fun a i => f a i.castSucc) init) n :=
-      Fin.foldlM_induction _ h0 (fun a i ha => hr a i.castSucc ha)
-    Fin.foldlM_succ_last (m := m) _ ▸ hr _ (last n) hrec
-
-
-theorem Vector.get_set_self {α} {n: Nat} {v: Vector α n} {i: Fin n} {a: α}:
-    (v.set i a).get i = a :=
-  Vector.getElem_set_self i.isLt
-
-
-theorem Vector.get_set_of_ne {α} {n: Nat} {v: Vector α n} {i j: Fin n} {a: α} (h: i ≠ j):
-    (v.set i a).get j = v.get j :=
-  Vector.getElem_set_ne i.isLt j.isLt (Fin.val_ne_of_ne h)
-
-
-def Option.allP {α} (p: α → Prop): (o: Option α) → Prop
-  | none => True
-  | some a => p a
-
-
-theorem Option.allP_mp {α} {p q: α → Prop} {o: Option α} (h1: o.allP p) (h2: ∀ a: α, p a → q a): o.allP q :=
-  match o with
-  | none => True.intro
-  | some a => h2 a h1
-
-
-def Except.allP {α β} (p: α → Prop): (e: Except β α) → Prop
-  | Except.error _ => True
-  | Except.ok a => p a
-
-
-theorem Except.allP_mp {α β} {p q: α → Prop} {e: Except β α} (h1: e.allP p) (h2: ∀ a: α, p a → q a): e.allP q :=
-  match e with
-  | Except.error _ => True.intro
-  | Except.ok a => h2 a h1
-
-
-theorem Except.allP_forall {α β} {ι} {p: ι → α → Prop}:
-    {e: Except β α} → (∀ i, e.allP (p i)) ↔ (e.allP (fun a => ∀ i, p i a))
-  | Except.error _ => ⟨fun _ => True.intro, fun _ _ => True.intro⟩
-  | Except.ok _ => ⟨id, id⟩
-
-
-theorem Except.allP_imp {α β} {c: Prop} {p: α → Prop}:
-    {e: Except β α} → (c → e.allP p) ↔ (e.allP (fun a => c → p a))
-  | Except.error _ => ⟨fun _ => True.intro, fun _ _ => True.intro⟩
-  | Except.ok _ => ⟨id, id⟩
-
-
-theorem Except.allP_and {α} {p q: α → Prop}: {e: Except β α} → e.allP p ∧ e.allP q ↔ e.allP (fun a => p a ∧ q a)
-  | Except.error _ => ⟨fun _ => True.intro, fun _ => ⟨True.intro, True.intro⟩⟩
-  | Except.ok _ => ⟨id, id⟩
-
-
-theorem Except.pure_def {α β} {a: α}: (pure a: Except β α) = Except.ok a := rfl
 
 
 theorem dfsFindMorphismFrom_preserves_some {a: Nat} {r s: NatCDFA a} {p: Fin r.n} {q: Fin s.n}
@@ -326,7 +250,7 @@ theorem dfsFindMorphism_ok_correct {a: Nat} {r s: NatCDFA a}:
       allP_of_resultCorrect (dfsFindMorphismFrom_err_correct
         (fun p => Vector.get_replicate ▸ True.intro)
         ⟨Array.toList_empty ▸ rfl, Array.toList_empty ▸ rfl⟩
-        (Nat.lt_succ_of_le Vector.countP_le_size)
+        (Nat.lt_succ_of_le Vector.cNone_le)
       ),
       dfsFindMorphismFrom_step
     ⟩
@@ -352,11 +276,6 @@ theorem dfsFindMorphism_ok_correct {a: Nat} {r s: NatCDFA a}:
   ⟩)
 
 
-def Except.allEP {α β} (p: β → Prop): (e: Except β α) → Prop
-  | Except.error e => p e
-  | Except.ok _ => True
-
-
 theorem dfsFindMorphism_err_correct {a: Nat} {r s: NatCDFA a}:
     (dfsFindMorphism r s).allEP (fun (l1, l2) =>
       r.advance l1 = r.advance l2 ∧ s.advance l1 ≠ s.advance l2) :=
@@ -366,7 +285,7 @@ theorem dfsFindMorphism_err_correct {a: Nat} {r s: NatCDFA a}:
       dfsFindMorphismFrom_err_correct
         (fun _ => Vector.get_replicate ▸ True.intro)
         ⟨Array.toList_empty ▸ rfl, Array.toList_empty ▸ rfl⟩
-        (Nat.lt_succ_of_le Vector.countP_le_size)
+        (Nat.lt_succ_of_le Vector.cNone_le)
     have concl := eq.subst res_correct; concl
   | Except.ok _ => True.intro
 
@@ -378,28 +297,28 @@ def checkTerminal {a: Nat} (r s: NatCDFA a) (m: DFSTable r s): Except (List (Fin
   Fin.foldlM r.n (fun () p =>
     match m.get p with
     | none => Except.ok ()
-    | some (q, u) => if s.t q = r.t p then Except.ok () else Except.error u.reverse
+    | some (q, u) => if s.f q = r.f p then Except.ok () else Except.error u.reverse
   ) ()
 
 
 def checkTerminal_ok_correct {a: Nat} {r s: NatCDFA a} {m: DFSTable r s}:
-    (checkTerminal r s m).allP (fun () => ∀ p: Fin r.n, (m.get p).allP (fun (q, _) => r.t p = s.t q)) :=
+    (checkTerminal r s m).allP (fun () => ∀ p: Fin r.n, (m.get p).allP (fun (q, _) => r.f p = s.f q)) :=
   let motive (acc: Except (List (Fin a)) Unit) (i: Nat) :=
-    acc.allP (fun () => ∀ p: Fin r.n, p < i → (m.get p).allP (fun (q, _) => r.t p = s.t q))
+    acc.allP (fun () => ∀ p: Fin r.n, p < i → (m.get p).allP (fun (q, _) => r.f p = s.f q))
   have ind: motive (checkTerminal r s m) r.n := Fin.foldlM_induction motive
     (Except.pure_def ▸ fun p hp => False.elim (Nat.not_lt_zero p hp))
     (fun acc i hrec => match acc with
       | Except.error _ => True.intro
       | Except.ok _ => match eq: m.get i with
         | none =>
-          have concl: ∀ p: Fin r.n, p < i.val.succ → (m.get p).allP (fun (q, _) => r.t p = s.t q) :=
+          have concl: ∀ p: Fin r.n, p < i.val.succ → (m.get p).allP (fun (q, _) => r.f p = s.f q) :=
             fun p hp => match Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hp) with
               | Or.inl lt => hrec p lt
               | Or.inr eq2 => Fin.eq_of_val_eq eq2 ▸ eq ▸ True.intro
           concl
         | some (_, _) => iteInduction (motive := fun acc => motive acc i.val.succ)
           (fun eq2 =>
-            have concl: ∀ p: Fin r.n, p < i.val.succ → (m.get p).allP (fun (q, _) => r.t p = s.t q) :=
+            have concl: ∀ p: Fin r.n, p < i.val.succ → (m.get p).allP (fun (q, _) => r.f p = s.f q) :=
             fun p hp => match Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hp) with
               | Or.inl lt => hrec p lt
               | Or.inr eq3 => Fin.eq_of_val_eq eq3 ▸ eq ▸ eq2.symm
@@ -411,7 +330,7 @@ def checkTerminal_ok_correct {a: Nat} {r s: NatCDFA a} {m: DFSTable r s}:
 
 def checkTerminal_err_correct {a: Nat} {r s: NatCDFA a} {m: DFSTable r s}:
     (checkTerminal r s m).allEP (fun l =>
-      ∃ p: Fin r.n, ∃ q: Fin s.n, (m.get p) = some (q, l.reverse) ∧ s.t q ≠ r.t p) :=
+      ∃ p: Fin r.n, ∃ q: Fin s.n, (m.get p) = some (q, l.reverse) ∧ s.f q ≠ r.f p) :=
   Fin.foldlM_induction (motive := fun (acc: Except _ _) _ => acc.allEP _)
     (Except.pure_def ▸ True.intro)
     (fun acc p hrec => match acc with
@@ -426,6 +345,9 @@ def checkTerminal_err_correct {a: Nat} {r s: NatCDFA a} {m: DFSTable r s}:
 /-
 The final, clean API
 -/
+public section
+namespace NatCDFA
+
 inductive MorphismObstruction {a: Nat} (r s: NatCDFA a) where
   | state: (l1: List (Fin a)) → (l2: List (Fin a)) →
     (r.advance l1 = r.advance l2) → (s.advance l1 ≠ s.advance l2) → MorphismObstruction r s
@@ -455,7 +377,7 @@ def findMorphism {a: Nat} (r s: NatCDFA a): FindMorphismResult r s :=
           (congrArg r.advance (List.reverse_reverse _).symm).trans (eq3.subst (h.left p))
         have ⟨_, eq4⟩ := h.right l
         have hls: s.advance l = q := (Prod.mk.inj (Option.some_inj.mp ((hlr ▸ eq4).symm.trans eq3))).left
-        fun abs => ne (((congrArg s.t hls.symm).trans abs.symm).trans (congrArg r.t hlr))
+        fun abs => ne (((congrArg s.f hls.symm).trans abs.symm).trans (congrArg r.f hlr))
       ))
   | Except.error (l1, l2) =>
     have h := eq ▸ dfsFindMorphism_err_correct (r := r) (s := s)
@@ -468,3 +390,6 @@ theorem not_existsMorphism_of_obstruction {a: Nat} {r s: NatCDFA a} (obstruction
   | MorphismObstruction.state l1 l2 hr hs =>
     hs (((hf l1).left.symm.trans (congrArg f hr)).trans (hf l2).left)
   | MorphismObstruction.final l hl => hl (hf l).right
+
+end NatCDFA
+end
