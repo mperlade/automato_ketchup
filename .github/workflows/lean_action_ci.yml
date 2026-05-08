@@ -62,7 +62,7 @@ jobs:
           # Check if the repository is eligible for the Reservoir.
           # Allowed values: "true" | "false".
           # Default: "false"
-          check-reservoir-eligibility: "true"
+          check-reservoir-eligibility: "false"
           
           # Check environment with leanchecker.
           # Uses the bundled `leanchecker` binary on Lean `nightly-2026-01-09` / `v4.28.0-rc1`
