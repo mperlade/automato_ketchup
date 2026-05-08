@@ -1,4 +1,4 @@
-name: Lean Action CI
+name: Build and generate doc
 
 on:
   push:
@@ -16,3 +16,8 @@ jobs:
           use-mathlib-cache: "false"
           check-reservoir-eligibility: "false"
       - uses: leanprover-community/docgen-action@main
+        with:
+          lake-package-directory: docbuild
+          api-docs: true
+          build-page: true
+          deploy: true
