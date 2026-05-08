@@ -57,7 +57,7 @@ jobs:
           # Project must be downstream of Mathlib to use the Mathlib cache.
           # Allowed values: "true" | "false" | "auto".
           # Default: "auto"
-          use-mathlib-cache: "true"
+          use-mathlib-cache: "false"
       
           # Check if the repository is eligible for the Reservoir.
           # Allowed values: "true" | "false".
