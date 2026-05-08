@@ -7,6 +7,7 @@ def nextPartition {a: Nat} (r: NatCDFA a) (p: Partition r.n) (b: Fin a): Partiti
   part := Vector.ofFn (fun s => p.part.get (r.δ s b))
 }
 
+
 theorem nextPartition_correct {a: Nat} {r: NatCDFA a} {p: Partition r.n} {b: Fin a}
   {i j: Fin r.n}:
     (nextPartition r p b).rel i j ↔ p.rel (r.δ i b) (r.δ j b) :=
@@ -176,3 +177,8 @@ theorem computeMoore_correct {a: Nat} {r: NatCDFA a} {i j: Fin r.n}:
     fun h => funext (fun _ => computeMoore_correct2 h),
     computeMoore_correct1
   ⟩
+
+
+theorem computeMoore_normalized {a: Nat} {r: NatCDFA a}:
+    (computeMoore r).normalized :=
+  computeMooreFrom_normalized

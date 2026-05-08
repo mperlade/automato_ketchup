@@ -1,5 +1,6 @@
 import Automata.Dedup
 import Automata.Counting
+import Automata.Util
 
 structure Partition (n: Nat) where
   k: Nat
@@ -342,11 +343,6 @@ theorem bool_eq_iff_ite_01_eq {a b: Bool}:
         | false => nomatch h
         | true => rfl
   ⟩
-
-
-theorem Vector.get_ofFn {α} {n: Nat} {f: Fin n → α} {i: Fin n}:
-    (Vector.ofFn f).get i = f i :=
-  Array.getElem_ofFn _
 
 
 theorem predPart_correct {n: Nat} {p: Fin n → Bool} {i j: Fin n}:
