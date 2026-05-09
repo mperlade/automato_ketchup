@@ -6,8 +6,8 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.RadixSort
-import AutoKchp.Util
+public import AutoKchp.Internal.RadixSort
+import AutoKchp.Internal.Util
 
 /-
 Construction of an array of new indices

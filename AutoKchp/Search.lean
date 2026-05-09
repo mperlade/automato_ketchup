@@ -7,7 +7,7 @@ Authors: Marc Perlade
 module
 
 public import AutoKchp.NatCDFA
-import AutoKchp.Util
+import AutoKchp.Internal.Util
 
 
 def dfsFrom {a: Nat} (r: NatCDFA a) (p: Fin r.n)

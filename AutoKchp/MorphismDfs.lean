@@ -7,7 +7,7 @@ Authors: Marc Perlade
 module
 
 public import AutoKchp.NatCDFA
-import AutoKchp.Util
+import AutoKchp.Internal.Util
 
 /-
 DFS to find a "state morphism" (which does not necessarily map terminal states to terminal states)

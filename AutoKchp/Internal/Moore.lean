@@ -7,8 +7,8 @@ Authors: Marc Perlade
 module
 
 public import AutoKchp.NatCDFA
-public import AutoKchp.Partition
-import AutoKchp.Util
+public import AutoKchp.Internal.Partition
+import AutoKchp.Internal.Util
 
 def nextPartition {a: Nat} (r: NatCDFA a) (p: Partition r.n) (b: Fin a): Partition r.n := {
   k := p.k,

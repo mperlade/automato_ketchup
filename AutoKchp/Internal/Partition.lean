@@ -6,9 +6,9 @@ Authors: Marc Perlade
 
 module
 
-import AutoKchp.Dedup
-public import AutoKchp.Counting
-import AutoKchp.Util
+import AutoKchp.Internal.Dedup
+public import AutoKchp.Internal.Counting
+import AutoKchp.Internal.Util
 
 public structure Partition (n: Nat) where
   k: Nat

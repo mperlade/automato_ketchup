@@ -7,9 +7,9 @@ Authors: Marc Perlade
 module
 
 public import AutoKchp.NatCDFA
-import AutoKchp.Moore
+import AutoKchp.Internal.Moore
 import AutoKchp.MorphismDfs
-import AutoKchp.Util
+import AutoKchp.Internal.Util
 
 def invertPartition {n: Nat} (p: Partition n): Vector (Option (Fin n)) p.k :=
   Fin.foldl n (fun acc i => acc.set (p.part.get i) i) (Vector.replicate p.k none)

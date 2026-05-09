@@ -9,3 +9,5 @@ module
 public import AutoKchp.NatCDFA
 public import AutoKchp.MorphismDfs
 public import AutoKchp.Minimize
+public import AutoKchp.Product
+public import AutoKchp.Search
