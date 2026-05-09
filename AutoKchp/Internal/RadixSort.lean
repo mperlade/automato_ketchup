@@ -6,8 +6,8 @@ Authors: Marc Perlade
 
 module
 
-import AutoKchp.Counting
-import AutoKchp.Util
+import AutoKchp.Internal.Counting
+import AutoKchp.Internal.Util
 
 /-
 Counting sort table construction

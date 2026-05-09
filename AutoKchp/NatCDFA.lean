@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-import AutoKchp.Util
+import AutoKchp.Internal.Util
 
 @[expose]
 public section
