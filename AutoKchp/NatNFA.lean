@@ -10,7 +10,7 @@ public section
 
 structure NatNFA (a: Nat) where
   n: Nat
-  δ: Fin n → Fin a → Fin n → Bool
+  δ: Fin n → Fin a → (Array (Fin n))
   i: Fin n → Bool
   f: Fin n → Bool
 
@@ -19,7 +19,7 @@ namespace NatNFA
 def path {a: Nat} (r: NatNFA a) (p q: Fin r.n):
     (l: List (Fin a)) → Prop
   | [] => p = q
-  | b::t => ∃ u: Fin r.n, r.δ p b u ∧ r.path u q t
+  | b::t => ∃ u: Fin r.n, u ∈ r.δ p b ∧ r.path u q t
 
 
 def successfulPath {a: Nat} (r: NatNFA a) (p q: Fin r.n) (l: List (Fin a)): Prop :=
