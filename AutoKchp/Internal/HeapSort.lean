@@ -1,6 +1,7 @@
 module
 
 import AutoKchp.Internal.Util
+public import AutoKchp.Internal.TotalOrder
 
 /-
 All the machinery to handle the implicit binary tree
@@ -245,14 +246,14 @@ instance instDecidableAncestor {x y: Nat}: Decidable (ancestor x y) :=
 /-
 Heap definition, fundamental sift-down routine
 -/
-def heap {α} [LE α] {n: Nat} (v: Vector α n) (i: Fin n): Prop :=
+def heap {α} [TotalOrd α] {n: Nat} (v: Vector α n) (i: Fin n): Prop :=
   ∀ s: Side, ∀ h: child i s < n, v.get i ≤ v.get ⟨child i s, h⟩ ∧
     heap v ⟨child i s, h⟩
   termination_by n - i
   decreasing_by exact Nat.sub_lt_sub_left i.isLt lt_child
 
 
-theorem heap_of_ancestor_heap {α} [LE α] {n: Nat} {v: Vector α n} {i j: Fin n}
+theorem heap_of_ancestor_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j: Fin n}
   (a: ancestor i j) (h: heap v i):
     heap v j :=
   match eq_or_child_ancestor_of_ancestor a with
@@ -264,15 +265,8 @@ theorem heap_of_ancestor_heap {α} [LE α] {n: Nat} {v: Vector α n} {i j: Fin n
   decreasing_by exact Nat.sub_lt_sub_left i.isLt lt_child
 
 
-def almostHeap {α} [LE α] {n: Nat} (v: Vector α n) (i: Fin n): Prop :=
+def almostHeap {α} [TotalOrd α] {n: Nat} (v: Vector α n) (i: Fin n): Prop :=
   ∀ s: Side, ∀ h: child i s < n, heap v ⟨child i s, h⟩
-
-
-public structure totOrdLe (α) [LE α] where
-  refl: ∀ a: α, a ≤ a
-  antisymm: ∀ a b: α, a ≤ b → b ≤ a → a = b
-  trans: ∀ a b c: α, a ≤ b → b ≤ c → a ≤ c
-  total: ∀ a b: α, a ≤ b ∨ b ≤ a
 
 
 inductive Swap where
@@ -280,7 +274,7 @@ inductive Swap where
   | swap: (s: Side) → Swap
 
 
-def computeSwap {α} [LE α] [DecidableLE α] (parent: α) (children: Side → α): Swap :=
+def computeSwap {α} [TotalOrd α] (parent: α) (children: Side → α): Swap :=
   if children Side.left ≤ children Side.right then
     if parent ≤ children Side.left then Swap.noSwap
     else Swap.swap Side.left
@@ -289,27 +283,27 @@ def computeSwap {α} [LE α] [DecidableLE α] (parent: α) (children: Side → �
     else Swap.swap Side.right
 
 
-theorem of_computeSwap_eq_noSwap {α} [LE α] [d: DecidableLE α] (ho: totOrdLe α)
+theorem of_computeSwap_eq_noSwap {α} [t: TotalOrd α]
   {parent: α} {children: Side → α} (h: computeSwap parent children = Swap.noSwap):
     ∀ s: Side, parent ≤ children s :=
   if le1: children Side.left ≤ children Side.right then
     if le2: parent ≤ children Side.left then
       fun
         | Side.left => le2
-        | Side.right => ho.trans _ _ _ le2 le1
+        | Side.right => t.le_trans le2 le1
     else
       nomatch (if_neg le2).symm.trans ((if_pos le1).symm.trans h)
   else
     if le2: parent ≤ children Side.right then
       fun
-        | Side.left => ho.trans _ _ _ le2
-          ((ho.total (children Side.left) (children Side.right)).resolve_left le1)
+        | Side.left => t.le_trans le2
+          ((t.le_total (children Side.left) (children Side.right)).resolve_left le1)
         | Side.right => le2
     else
       nomatch (if_neg le2).symm.trans ((if_neg le1).symm.trans h)
 
 
-theorem of_computeSwap_eq_swap {α} [LE α] [d: DecidableLE α] (ho: totOrdLe α)
+theorem of_computeSwap_eq_swap {α} [t: TotalOrd α]
   {parent: α} {children: Side → α} {s: Side} (h: computeSwap parent children = Swap.swap s):
     children s ≤ parent ∧ children s ≤ children s.other :=
   if le1: children Side.left ≤ children Side.right then
@@ -317,7 +311,7 @@ theorem of_computeSwap_eq_swap {α} [LE α] [d: DecidableLE α] (ho: totOrdLe α
       nomatch (if_pos le2).symm.trans ((if_pos le1).symm.trans h)
     else
       match s with
-        | Side.left => ⟨(ho.total parent (children Side.left)).resolve_left le2, le1⟩
+        | Side.left => ⟨(t.le_total parent (children Side.left)).resolve_left le2, le1⟩
         | Side.right => nomatch (if_neg le2).symm.trans ((if_pos le1).symm.trans h)
   else
     if le2: parent ≤ children Side.right then
@@ -326,12 +320,12 @@ theorem of_computeSwap_eq_swap {α} [LE α] [d: DecidableLE α] (ho: totOrdLe α
       match s with
         | Side.left =>  nomatch (if_neg le2).symm.trans ((if_neg le1).symm.trans h)
         | Side.right => ⟨
-            (ho.total parent (children Side.right)).resolve_left le2,
-            (ho.total _ _).resolve_left le1
+            (t.le_total parent (children Side.right)).resolve_left le2,
+            (t.le_total _ _).resolve_left le1
           ⟩
 
 
-def siftFrom {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α n) (i: Fin n): Vector α n :=
+def siftFrom {α} [TotalOrd α] {n: Nat} (v: Vector α n) (i: Fin n): Vector α n :=
   let left := left i
   let right := right i
   if rlt: right < n then
@@ -350,7 +344,7 @@ def siftFrom {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α n) (i: Fin n):
   decreasing_by exact Nat.sub_lt_sub_left i.isLt (s.casesOn lt_left lt_right)
 
 
-def siftFrom_only_descendants {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n}
+def siftFrom_only_descendants {α} [TotalOrd α] {n: Nat} {v: Vector α n}
   {i j: Fin n} (h: ¬ancestor i j):
     (siftFrom v i).get j = v.get j :=
   have nej: i ≠ j := fun eq => h (eq ▸ ancestor_refl i)
@@ -383,7 +377,7 @@ def siftFrom_only_descendants {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector 
   decreasing_by exact Nat.sub_lt_sub_left i.isLt (s.casesOn lt_left lt_right)
 
 
-theorem heap_only_descendants {α} [LE α] {n: Nat} {v₁ v₂: Vector α n} {i: Fin n}
+theorem heap_only_descendants {α} [TotalOrd α] {n: Nat} {v₁ v₂: Vector α n} {i: Fin n}
   (h: ∀ j: Fin n, ancestor i j → v₁.get j = v₂.get j):
     heap v₁ i → heap v₂ i :=  fun hh =>
   have hh := heap.eq_def v₁ i ▸ hh
@@ -397,7 +391,7 @@ theorem heap_only_descendants {α} [LE α] {n: Nat} {v₁ v₂: Vector α n} {i:
   decreasing_by exact Nat.sub_lt_sub_left i.isLt lt_child
 
 
-theorem siftFrom_sibling_heap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i: Fin n}
+theorem siftFrom_sibling_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i: Fin n}
   {s: Side} (h: ∀ lt: child i s.other < n, heap v ⟨child i s.other, lt⟩):
     ∀ lt1: child i s < n, ∀ lt2: child i s.other < n,
       heap (siftFrom v ⟨child i s, lt1⟩) ⟨child i s.other, lt2⟩ :=
@@ -407,7 +401,7 @@ theorem siftFrom_sibling_heap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector 
     ) (h lt2)
 
 
-theorem swap_lt_heap {α} [LE α] {n: Nat} {v: Vector α n} {i j k: Fin n}
+theorem swap_lt_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j k: Fin n}
   (h: heap v k) (hi: i < k) (hj: j < k):
     heap (v.swap i j) k :=
   heap_only_descendants (fun p a =>
@@ -417,14 +411,14 @@ theorem swap_lt_heap {α} [LE α] {n: Nat} {v: Vector α n} {i j k: Fin n}
   ) h
 
 
-theorem swap_self_almostHeap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i j: Fin n}
+theorem swap_self_almostHeap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j: Fin n}
   (h: heap v j) (hi: i < j):
     almostHeap (v.swap i j) j :=
   have h := Eq.mpr (heap.eq_def v j).symm h
   fun s hl => swap_lt_heap (h s hl).right (Nat.lt_trans hi lt_child) lt_child
 
 
-theorem swap_sibling_heap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i: Fin n}
+theorem swap_sibling_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i: Fin n}
   {s: Side} (h: ∀ lt2: child i s.other < n, heap v ⟨child i s.other, lt2⟩)
   (lt: child i s < n):
     ∀ lt2: child i s.other < n, heap (v.swap i (child i s)) ⟨child i s.other, lt2⟩ :=
@@ -435,14 +429,14 @@ theorem swap_sibling_heap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n
   ) (h lt2)
 
 
-theorem heap_of_almostHeap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {k: Fin n}
+theorem heap_of_almostHeap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {k: Fin n}
   (h1: almostHeap v k)
   (h2: ∀ (s: Side) (hs: child k s < n), v.get k ≤ v.get ⟨child k s, hs⟩):
     heap v k :=
   heap.eq_def v k ▸ fun s hs => ⟨h2 s hs, h1 s hs⟩
 
 
-theorem get_parent_siftFrom_swap {α} [LE α] [DecidableLE α] (s: Side)
+theorem get_parent_siftFrom_swap {α} [TotalOrd α] (s: Side)
   {n: Nat} {v: Vector α n} {i: Fin n}:
     ∀ h: child i s < n, (siftFrom (v.swap i (child i s)) ⟨child i s, h⟩).get i =
       v.get ⟨child i s, h⟩ :=
@@ -450,7 +444,7 @@ theorem get_parent_siftFrom_swap {α} [LE α] [DecidableLE α] (s: Side)
     (Vector.get_swap_left (i := i) (j := ⟨child i s, h⟩))
 
 
-theorem get_siftFrom_self {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i: Fin n}:
+theorem get_siftFrom_self {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i: Fin n}:
     (fun w => w = v.get i ∨ ∃ (s: Side) (h: child i s < n), w = v.get ⟨child i s, h⟩)
     ((siftFrom v i).get i) :=
   siftFrom.eq_def v i ▸ if rlt: right i < n then
@@ -475,7 +469,7 @@ theorem get_siftFrom_self {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n
       dif_neg llt ▸ Or.inl rfl
 
 
-theorem get_child_siftFrom_swap {α} [LE α] [DecidableLE α] (s: Side)
+theorem get_child_siftFrom_swap {α} [TotalOrd α] (s: Side)
   {n: Nat} {v: Vector α n} {i: Fin n}:
     ∀ h: child i s < n, heap v ⟨child i s, h⟩ → (fun w => w = v.get i ∨ w ≥ v.get ⟨child i s, h⟩)
       ((siftFrom (v.swap i (child i s)) ⟨child i s, h⟩).get ⟨child i s, h⟩) := fun h hh =>
@@ -488,7 +482,7 @@ theorem get_child_siftFrom_swap {α} [LE α] [DecidableLE α] (s: Side)
         ((heap.eq_def v _ ▸ hh) s2 hs2).left
     ))
 
-theorem get_sibling_siftFrom_swap {α} [LE α] [DecidableLE α] {s: Side}
+theorem get_sibling_siftFrom_swap {α} [TotalOrd α] {s: Side}
   {n: Nat} {v: Vector α n} {i: Fin n}:
     ∀ h1: child i s < n, ∀ h2: child i s.other < n,
       (siftFrom (v.swap i (child i s)) ⟨child i s, h1⟩).get ⟨child i s.other, h2⟩ =
@@ -501,7 +495,7 @@ theorem get_sibling_siftFrom_swap {α} [LE α] [DecidableLE α] {s: Side}
       )
 
 
-theorem siftFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
+theorem siftFrom_correct {α} [t: TotalOrd α]
   {n: Nat} {v: Vector α n} {i: Fin n} (h: almostHeap v i):
     heap (siftFrom v i) i :=
   if rlt: right i < n then
@@ -510,7 +504,7 @@ theorem siftFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
 
     let ssw (s: Side) := siftFrom (v.swap i (fin_child s)) (fin_child s)
     have hrec (s: Side): heap (ssw s) (fin_child s) :=
-      siftFrom_correct ho (swap_self_almostHeap
+      siftFrom_correct (swap_self_almostHeap
         (h s (fin_child s).isLt) (Fin.lt_def.mpr ((lt_child))))
 
     have sibling_heap (s: Side): heap (ssw s) (fin_child s.other) :=
@@ -533,13 +527,13 @@ theorem siftFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
       | Swap.noSwap => v
       | Swap.swap s => siftFrom (v.swap i (fin_child s)) (fin_child s)
       ) i := match eqsw: swap with
-      | Swap.noSwap => heap_of_almostHeap h (fun s _ => of_computeSwap_eq_noSwap ho eqsw s)
+      | Swap.noSwap => heap_of_almostHeap h (fun s _ => of_computeSwap_eq_noSwap eqsw s)
       | Swap.swap s =>
-        have hsw := of_computeSwap_eq_swap ho eqsw
+        have hsw := of_computeSwap_eq_swap eqsw
         heap_of_almostHeap (almost_heap s) (fun s₂ _ => get_parent s ▸
           s.induction (fun w => v.get (fin_child s) ≤ (ssw s).get (fin_child w))
             (match (get_child s) with
-              | .inl eqi => ho.trans _ _ _ hsw.left (eqi ▸ ho.refl (v.get i))
+              | .inl eqi => t.le_trans hsw.left (eqi ▸ t.le_refl (v.get i))
               | .inr le => le)
             ((congrArg (fun x => v.get (fin_child s) ≤ x) (get_sibling s)).mpr
                 hsw.right)
@@ -559,7 +553,7 @@ theorem siftFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
               have concl: (v.swap i fin_left).get i ≤ (v.swap i fin_left).get fin_left :=
                 (Vector.get_swap_left (j := fin_left)).symm ▸
                 (Vector.get_swap_right (j := fin_left)).symm ▸
-                  (ho.total (v.get i) (v.get fin_left)).resolve_left nle
+                  (t.le_total (v.get i) (v.get fin_left)).resolve_left nle
               concl,
               (heap.eq_def (v.swap i fin_left) _).mpr fun s hs =>
                 False.elim (rlt (Nat.lt_of_le_of_lt (Nat.add_one_le_of_lt lt_child) hs))
@@ -576,7 +570,7 @@ theorem siftFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
   decreasing_by exact Nat.sub_lt_sub_left i.isLt (s.casesOn lt_left lt_right)
 
 
-theorem siftFrom_perm {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i: Fin n}:
+theorem siftFrom_perm {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i: Fin n}:
     v.Perm (siftFrom v i) :=
   siftFrom.eq_def v i ▸ if rlt: right i < n then
     let fin_child (s: Side): Fin n := ⟨child i s, match s with
@@ -601,21 +595,20 @@ theorem siftFrom_perm {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n} {i
 /-
 Construct a min-heap in-place in O(n) time
 -/
-def heapifyFrom {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α n):
+def heapifyFrom {α} [TotalOrd α] {n: Nat} (v: Vector α n):
     (i: Nat) → i ≤ n → Vector α n
   | 0 => fun _ => v
   | i + 1 => fun hi => heapifyFrom (siftFrom v ⟨i, hi⟩) i (Nat.le_of_succ_le hi)
 
 
-theorem heapifyFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
-  {n: Nat} {v: Vector α n}:
+theorem heapifyFrom_correct {α} [TotalOrd α] {n: Nat} {v: Vector α n}:
     {i: Nat} → (hi: i ≤ n) → (∀ j: Fin n, i ≤ j → heap v j) →
     (∀ j: Fin n, heap (heapifyFrom v i hi) j)
   | 0 => fun _ h j => h j (Nat.zero_le j)
   | i + 1 => fun hi h =>
-    (heapifyFrom_correct ho (Nat.le_of_succ_le hi) fun j hj => (
+    (heapifyFrom_correct (Nat.le_of_succ_le hi) fun j hj => (
       if a: ancestor i j then
-        heap_of_ancestor_heap a (siftFrom_correct ho (fun s hs =>
+        heap_of_ancestor_heap a (siftFrom_correct (fun s hs =>
           h ⟨child i s, hs⟩ (Nat.succ_le_of_lt lt_child)))
       else
         heap_only_descendants (v₁ := v)
@@ -627,23 +620,22 @@ theorem heapifyFrom_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
     ))
 
 
-theorem heapifyFrom_perm {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n}:
+theorem heapifyFrom_perm {α} [TotalOrd α] {n: Nat} {v: Vector α n}:
     {i: Nat} → (hi: i ≤ n) → v.Perm (heapifyFrom v i hi)
   | 0 => fun _ => Vector.Perm.rfl
   | _ + 1 => fun hi => siftFrom_perm.trans (heapifyFrom_perm (Nat.le_of_succ_le hi))
 
 
-def heapify {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α n): Vector α n :=
+def heapify {α} [TotalOrd α] {n: Nat} (v: Vector α n): Vector α n :=
   heapifyFrom v n (Nat.le_refl n)
 
 
-theorem heapify_correct {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
-  {n: Nat} {v: Vector α n}:
+theorem heapify_correct {α} [TotalOrd α] {n: Nat} {v: Vector α n}:
     ∀ j: Fin n, heap (heapify v) j :=
-  heapifyFrom_correct ho (Nat.le_refl n) (fun k hk => False.elim (Nat.not_le_of_lt k.isLt hk))
+  heapifyFrom_correct (Nat.le_refl n) (fun k hk => False.elim (Nat.not_le_of_lt k.isLt hk))
 
 
-theorem heapify_perm {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n}:
+theorem heapify_perm {α} [TotalOrd α] {n: Nat} {v: Vector α n}:
     v.Perm (heapify v) :=
   heapifyFrom_perm (Nat.le_refl n)
 
@@ -651,7 +643,7 @@ theorem heapify_perm {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n}:
 /-
 Pop the minimum of the heap
 -/
-def heapop {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α (n + 1)): α × Vector α n :=
+def heapop {α} [TotalOrd α] {n: Nat} (v: Vector α (n + 1)): α × Vector α n :=
   match n with
     | 0 => (v.get 0, #v[])
     | n + 1 =>
@@ -660,7 +652,7 @@ def heapop {α} [LE α] [DecidableLE α] {n: Nat} (v: Vector α (n + 1)): α × 
       (min, siftFrom (v.pop.set 0 last) 0)
 
 
-theorem set_self_almostHeap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α n}
+theorem set_self_almostHeap {α} [TotalOrd α] {n: Nat} {v: Vector α n}
   {i: Fin n} {a: α} (h: heap v i):
     almostHeap (v.set i a) i :=
   have h := Eq.mpr (heap.eq_def v i).symm h
@@ -670,7 +662,7 @@ theorem set_self_almostHeap {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α
   ) (h s hs).right
 
 
-theorem heap_pop {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α (n + 1)} {i: Fin n}
+theorem heap_pop {α} [TotalOrd α] {n: Nat} {v: Vector α (n + 1)} {i: Fin n}
   (h: heap v i.castSucc):
     heap v.pop i :=
   heap.eq_def v.pop i ▸ fun s hs =>
@@ -681,39 +673,38 @@ theorem heap_pop {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α (n + 1)} {
   decreasing_by exact Nat.sub_lt_sub_left i.isLt lt_child
 
 
-theorem heapop_heap {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
+theorem heapop_heap {α} [TotalOrd α]
   {n: Nat} {v: Vector α (n + 2)} (h: heap v 0):
     heap (heapop v).snd 0 :=
-  siftFrom_correct ho (set_self_almostHeap (heap_pop h))
+  siftFrom_correct (set_self_almostHeap (heap_pop h))
 
 
-theorem heap_min {α} [LE α] (ho: totOrdLe α) {n: Nat} {v: Vector α n} {i: Fin n} (h: heap v i):
+theorem heap_min {α} [t: TotalOrd α] {n: Nat} {v: Vector α n} {i: Fin n} (h: heap v i):
     ∀ j: Fin n, ancestor i j → v.get i ≤ v.get j :=
   fun j hj => match eq_or_child_ancestor_of_ancestor hj with
-    | Or.inl eq => (Fin.eq_of_val_eq eq) ▸ (ho.refl _)
+    | Or.inl eq => (Fin.eq_of_val_eq eq) ▸ (t.le_refl _)
     | Or.inr ⟨s, a⟩ =>
       have h := (heap.eq_def v i ▸ h) s (Nat.lt_of_le_of_lt (le_of_ancestor a) j.isLt)
-      ho.trans _ _ _ h.left (heap_min ho h.right j a)
+      t.le_trans h.left (heap_min h.right j a)
   termination_by n - i
   decreasing_by exact Nat.sub_lt_sub_left i.isLt lt_child
 
 
-theorem heap_min' {α} [LE α] (ho: totOrdLe α) {n: Nat} {v: Vector α (n + 1)} (h: heap v 0):
+theorem heap_min' {α} [TotalOrd α] {n: Nat} {v: Vector α (n + 1)} (h: heap v 0):
     ∀ j: Fin (n + 1), v.get 0 ≤ v.get j :=
-  fun j => heap_min ho h j (zero_ancestor j)
+  fun j => heap_min h j (zero_ancestor j)
 
 
-theorem heapop_le {α} [LE α] [DecidableLE α] (ho: totOrdLe α)
-  {n: Nat} {v: Vector α (n + 1)} (h: heap v 0):
+theorem heapop_le {α} [t: TotalOrd α] {n: Nat} {v: Vector α (n + 1)} (h: heap v 0):
     ∀ j: Fin (n + 1), (heapop v).fst ≤ v.get j :=
   match n with
   | 0 => fun j =>
     have eq: j = 0 := Fin.eq_of_val_eq (Nat.lt_one_iff.mp j.isLt)
-    eq ▸ ho.refl (v.get 0)
-  | _ + 1 => fun j => heap_min' ho h j
+    eq ▸ t.le_refl (v.get 0)
+  | _ + 1 => fun j => heap_min' h j
 
 
-theorem heapop_mem {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α (n + 1)} {a: α}:
+theorem heapop_mem {α} [TotalOrd α] {n: Nat} {v: Vector α (n + 1)} {a: α}:
     a ∈ v ↔ a = (heapop v).fst ∨ a ∈ (heapop v).snd :=
   match n with
   | 0 => ⟨
@@ -755,8 +746,7 @@ theorem heapop_mem {α} [LE α] [DecidableLE α] {n: Nat} {v: Vector α (n + 1)}
 /-
 Canonicalize (simultaneously sort and dedup) using heap sort
 -/
-def reconstructFrom {α} [LE α] [DecidableLE α] [DecidableEq α]
-  {n: Nat} (hea: Vector α n) (acc: Array α): Array α :=
+def reconstructFrom {α} [TotalOrd α] {n: Nat} (hea: Vector α n) (acc: Array α): Array α :=
   match n with
   | 0 => acc
   | _ + 1 =>
@@ -765,23 +755,11 @@ def reconstructFrom {α} [LE α] [DecidableLE α] [DecidableEq α]
     reconstructFrom newhea newacc
 
 
-def le_ne {α} [LE α] (a b: α): Prop := a ≤ b ∧ a ≠ b
+def reconstructFromInvariant {α}  [TotalOrd α] (acc: Array α): Prop :=
+  ∀ i: Nat, ∀ hi: i + 1 < acc.size, acc[i] < acc[i + 1]
 
 
-theorem le_ne_trans {α} [LE α] (ho: totOrdLe α) {a b c: α}
-  (h1: le_ne a b) (h2: le_ne b c):
-    le_ne a c :=
-  ⟨
-    ho.trans _ _ _ h1.left h2.left,
-    fun eq => h1.right (ho.antisymm a b h1.left (eq ▸ h2.left))
-  ⟩
-
-
-def reconstructFromInvariant {α} [LE α] (acc: Array α): Prop :=
-  ∀ i: Nat, ∀ hi: i + 1 < acc.size, le_ne acc[i] acc[i + 1]
-
-
-theorem reconstructFrom_sorted {α} [LE α] [DecidableLE α] [DecidableEq α] (ho: totOrdLe α)
+theorem reconstructFrom_sorted {α}  [TotalOrd α]
   {n: Nat} {hea: Vector α n} {acc: Array α} (h: ∀ pos: n > 0, heap hea ⟨0, pos⟩)
   (h2: ∀ a b: α, a ∈ acc → b ∈ hea → a ≤ b) (h3: reconstructFromInvariant acc):
     reconstructFromInvariant (reconstructFrom hea acc) := match n with
@@ -790,27 +768,27 @@ theorem reconstructFrom_sorted {α} [LE α] [DecidableLE α] [DecidableEq α] (h
     have new_h: ∀ pos: n > 0, heap (heapop hea).snd ⟨0, pos⟩ := fun pos =>
       match n with
       | 0 => False.elim (Nat.not_lt_zero 0 pos)
-      | _ + 1 => heapop_heap ho (h (Nat.zero_lt_succ _))
+      | _ + 1 => heapop_heap (h (Nat.zero_lt_succ _))
     have concl: reconstructFromInvariant (reconstructFrom (heapop hea).snd
         (if acc.back? = some (heapop hea).fst then acc else acc.push (heapop hea).fst)) :=
       iteInduction (motive := fun (w: Array α) =>
           reconstructFromInvariant (reconstructFrom (heapop hea).snd w))
-        (fun _ => reconstructFrom_sorted ho new_h (fun a b ha hb =>
+        (fun _ => reconstructFrom_sorted new_h (fun a b ha hb =>
           h2 a b ha (heapop_mem.mpr (Or.inr hb))
         ) h3)
-        (fun ne => reconstructFrom_sorted ho new_h (fun a b ha hb =>
+        (fun ne => reconstructFrom_sorted new_h (fun a b ha hb =>
           match Array.mem_push.mp ha with
           | .inl mem => h2 a b mem (heapop_mem.mpr (Or.inr hb))
           | .inr eq =>
             have ⟨j, hj⟩ := Vector.get_of_mem (heapop_mem.mpr (Or.inr hb))
-            eq ▸ hj ▸ heapop_le ho (h (Nat.zero_lt_succ _)) j
+            eq ▸ hj ▸ heapop_le (h (Nat.zero_lt_succ _)) j
         ) (fun i hi =>
           have le: i + 1 ≤ acc.size := (Nat.le_of_lt_succ (Nat.lt_of_lt_of_eq hi (Array.size_push _)))
           match Nat.lt_or_eq_of_le le with
           | .inl lt => Array.getElem_push_lt lt ▸
             Array.getElem_push_lt (Nat.lt_of_succ_lt lt) ▸ h3 i lt
           | .inr eq =>
-            have concl: le_ne acc[i] (acc.push (heapop hea).fst)[i + 1] :=
+            have concl: acc[i] < (acc.push (heapop hea).fst)[i + 1] :=
               getElem_congr_idx eq (coll := Array α) ▸ Array.getElem_push_eq ▸ ⟨
                 h2 acc[i] (heapop hea).fst (Array.getElem_mem _) (heapop_mem.mpr (Or.inl rfl)),
                 have hidx: i = acc.size - 1 := Nat.add_one_sub_one i ▸ (congrArg (· - 1) eq)
@@ -824,8 +802,7 @@ theorem reconstructFrom_sorted {α} [LE α] [DecidableLE α] [DecidableEq α] (h
     concl
 
 
-theorem mem_reconstructFrom {α} [LE α] [DecidableLE α] [DecidableEq α]
-  {n: Nat} {hea: Vector α n} {acc: Array α} {a: α}:
+theorem mem_reconstructFrom {α} [TotalOrd α] {n: Nat} {hea: Vector α n} {acc: Array α} {a: α}:
     a ∈ (reconstructFrom hea acc) ↔ a ∈ hea ∨ a ∈ acc :=
   match n with
   | 0 => ⟨
@@ -870,20 +847,17 @@ theorem mem_reconstructFrom {α} [LE α] [DecidableLE α] [DecidableEq α]
   ⟩
 
 
-def reconstruct {α} [LE α] [DecidableLE α] [DecidableEq α]
-  {n: Nat} (hea: Vector α n): Array α :=
+def reconstruct {α} [TotalOrd α] {n: Nat} (hea: Vector α n): Array α :=
   reconstructFrom hea #[]
 
 
-theorem reconstruct_sorted {α} [LE α] [DecidableLE α] [DecidableEq α] (ho: totOrdLe α)
-  {n: Nat} {hea: Vector α n} (h: ∀ pos: n > 0, heap hea ⟨0, pos⟩):
+theorem reconstruct_sorted {α} [TotalOrd α] {n: Nat} {hea: Vector α n} (h: ∀ pos: n > 0, heap hea ⟨0, pos⟩):
     reconstructFromInvariant (reconstruct hea) :=
-  reconstructFrom_sorted ho h (fun a _ ha => False.elim (Array.not_mem_empty a ha))
+  reconstructFrom_sorted h (fun a _ ha => False.elim (Array.not_mem_empty a ha))
     (fun i hi => False.elim (Nat.not_succ_le_zero i (Nat.le_of_lt hi)))
 
 
-theorem mem_reconstruct {α} [LE α] [DecidableLE α] [DecidableEq α]
-  {n: Nat} {hea: Vector α n} {a: α}:
+theorem mem_reconstruct {α} [TotalOrd α] {n: Nat} {hea: Vector α n} {a: α}:
     a ∈ reconstruct hea ↔ a ∈ hea :=
   ⟨
     fun mem => (mem_reconstructFrom.mp mem).resolve_right (Array.not_mem_empty a),
@@ -891,23 +865,22 @@ theorem mem_reconstruct {α} [LE α] [DecidableLE α] [DecidableEq α]
   ⟩
 
 
-public def canonicalize {α} [LE α] [DecidableLE α] [DecidableEq α] (v: Array α): Array α :=
+public def canonicalize {α} [TotalOrd α] (v: Array α): Array α :=
   reconstruct (heapify v.toVector)
 
 
-theorem canonicalize_sorted {α} [LE α] [DecidableLE α] [DecidableEq α]
-  (ho: totOrdLe α) {v: Array α}:
+theorem canonicalize_sorted {α} [TotalOrd α] {v: Array α}:
     reconstructFromInvariant (canonicalize v) :=
-  reconstruct_sorted ho (fun pos => heapify_correct ho ⟨0, pos⟩)
+  reconstruct_sorted (fun pos => heapify_correct ⟨0, pos⟩)
 
 
-public theorem mem_canonicalize {α} [LE α] [DecidableLE α] [DecidableEq α] {v: Array α} {a: α}:
+public theorem mem_canonicalize {α} [TotalOrd α] {v: Array α} {a: α}:
     a ∈ canonicalize v ↔ a ∈ v :=
   mem_reconstruct.trans ((Vector.Perm.mem_iff heapify_perm).symm.trans Vector.mem_mk)
 
 
-theorem eq_of_sorted_mem {α} [LE α] (ho: totOrdLe α) {v₁ v₂: List α} (h: ∀ a: α, a ∈ v₁ ↔ a ∈ v₂)
-  (h1: v₁.Pairwise le_ne) (h2: v₂.Pairwise le_ne):
+theorem eq_of_sorted_mem {α} [t: TotalOrd α] {v₁ v₂: List α} (h: ∀ a: α, a ∈ v₁ ↔ a ∈ v₂)
+  (h1: v₁.Pairwise (· < ·)) (h2: v₂.Pairwise (· < ·)):
     v₁ = v₂ :=
   match v₁ with
   | [] => match v₂ with
@@ -919,7 +892,7 @@ theorem eq_of_sorted_mem {α} [LE α] (ho: totOrdLe α) {v₁ v₂: List α} (h:
       match List.mem_cons.mp ((h a).mp List.mem_cons_self) with
       | .inl eqb => List.cons_eq_cons.mpr ⟨
         eqb,
-        eq_of_sorted_mem ho (fun c => ⟨
+        eq_of_sorted_mem (fun c => ⟨
             fun mem => (List.mem_cons.mp ((h c).mp (List.mem_cons_of_mem a mem))).resolve_left
               (eqb ▸ (Ne.symm ((List.pairwise_cons.mp h1).left c mem).right)),
             fun mem => (List.mem_cons.mp ((h c).mpr (List.mem_cons_of_mem b mem))).resolve_left
@@ -928,39 +901,38 @@ theorem eq_of_sorted_mem {α} [LE α] (ho: totOrdLe α) {v₁ v₂: List α} (h:
           (List.pairwise_cons.mp h1).right (List.pairwise_cons.mp h2).right
       ⟩
       | .inr mem =>
-        have lt1: le_ne b a := (List.pairwise_cons.mp h2).left a mem
-        have lt2: le_ne a b := (List.pairwise_cons.mp h1).left b
+        have lt1: b < a := (List.pairwise_cons.mp h2).left a mem
+        have lt2: a < b := (List.pairwise_cons.mp h1).left b
           ((List.mem_cons.mp ((h b).mpr List.mem_cons_self)).resolve_left lt1.right)
-        False.elim (lt2.right (ho.antisymm a b lt2.left lt1.left))
+        False.elim (lt2.right (t.le_antisymm lt2.left lt1.left))
 
 
-theorem propagate_reconstructFromInvariant {α} [LE α] (ho: totOrdLe α) {v: Array α}
+theorem propagate_reconstructFromInvariant {α} [TotalOrd α] {v: Array α}
   {i j: Nat} (hi: i < j) (hj: j < v.size) (h: reconstructFromInvariant v):
-    le_ne v[i] v[j] :=
+    v[i] < v[j] :=
   if eq: i + 1 = j then
     eq ▸ (h i (eq ▸ hj))
   else
     have lt: i + 1 < j := Nat.lt_of_le_of_ne (Nat.succ_le_of_lt hi) eq
-    le_ne_trans ho (h i (Nat.lt_trans lt hj)) (propagate_reconstructFromInvariant ho lt hj h)
+    TotalOrd.lt_trans (h i (Nat.lt_trans lt hj)) (propagate_reconstructFromInvariant lt hj h)
 
 
-theorem of_reconstructFromInvariant {α} [LE α] (ho: totOrdLe α) {v: Array α}
+theorem of_reconstructFromInvariant {α} [TotalOrd α] {v: Array α}
   (h: reconstructFromInvariant v):
-    v.toList.Pairwise le_ne :=
+    v.toList.Pairwise (· < ·) :=
   List.pairwise_iff_getElem.mpr (fun _ _ _ hj hij =>
-    propagate_reconstructFromInvariant ho hij hj h
+    propagate_reconstructFromInvariant hij hj h
   )
 
 
-public theorem canonicalize_correct {α} [LE α] [DecidableLE α] [DecidableEq α] (ho: totOrdLe α)
-  {v₁ v₂: Array α}:
+public theorem canonicalize_correct {α} [TotalOrd α] {v₁ v₂: Array α}:
     canonicalize v₁ = canonicalize v₂ ↔ (∀ a: α, a ∈ v₁ ↔ a ∈ v₂) :=
   ⟨
     fun eq _ => mem_canonicalize.symm.trans (eq ▸ mem_canonicalize),
-    fun h => Array.toList_inj.mp (eq_of_sorted_mem ho
+    fun h => Array.toList_inj.mp (eq_of_sorted_mem
         (fun a => Array.mem_toList_iff.trans ((mem_canonicalize.trans
           ((h a).trans mem_canonicalize.symm)).trans Array.mem_toList_iff.symm))
-        (of_reconstructFromInvariant ho (canonicalize_sorted ho))
-        (of_reconstructFromInvariant ho (canonicalize_sorted ho))
+        (of_reconstructFromInvariant canonicalize_sorted)
+        (of_reconstructFromInvariant canonicalize_sorted)
       )
   ⟩
