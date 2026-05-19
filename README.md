@@ -14,7 +14,7 @@ Efficient and verified DFA minimization in Lean 4
 
 ## Usage
 
-The main type in this library is [`NatCDFA (a: Nat)`](https://mperlade.github.io/automato_ketchup/AutoKchp/NatCDFA.html#NatCDFA), representing complete deterministic finite automata on the alphabet `Fin a` whose states are natural numbers. Below are listed the main operations supported at this time: 
+The main type in this library is [`NatCDFA (a: Nat)`](https://mperlade.github.io/automato_ketchup/AutoKchp/CDFA.html#NatCDFA), representing complete deterministic finite automata on the alphabet `Fin a` whose states are natural numbers. Below are listed the main operations supported at this time: 
 
 - **Minimization**: the API exposes [`NatCDFA.minimize`](https://mperlade.github.io/automato_ketchup/AutoKchp/Minimize.html#NatCDFA.minimize). This function uses Moore's radix sort-based algorithm and runs in $O(n^2 a)$.
 

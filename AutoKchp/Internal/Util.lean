@@ -274,6 +274,32 @@ theorem get_set_of_ne {v: Vector α k} {i j: Fin k} {a: α} (h: i ≠ j):
     (v.set i a).get j = v.get j :=
   getElem_set_ne i.isLt j.isLt (Fin.val_ne_of_ne h)
 
+
+theorem get_swap_of_ne {v: Vector α k} {i j m: Fin k} (hi: i ≠ m) (hj: j ≠ m):
+    (v.swap i j).get m = v.get m :=
+  getElem_swap_of_ne (Ne.symm (Fin.val_ne_of_ne hi)) (Ne.symm (Fin.val_ne_of_ne hj))
+
+
+theorem get_swap_left {v: Vector α k} {i j: Fin k}:
+    (v.swap i j).get i = v.get j :=
+  getElem_swap_left i.isLt j.isLt
+
+
+theorem get_swap_right {v: Vector α k} {i j: Fin k}:
+    (v.swap i j).get j = v.get i :=
+  getElem_swap_right i.isLt j.isLt
+
+
+theorem get_pop {v: Vector α (k + 1)} {i: Fin k}:
+    v.pop.get i = v.get i.castSucc :=
+  getElem_pop i.isLt
+
+
+theorem mem_of_mem_pop {v: Vector α (k + 1)} {a: α} (h: a ∈ v.pop):
+    a ∈ v :=
+  have ⟨_, hi⟩ := get_of_mem h
+  (get_pop.symm.trans hi) ▸ get_mem
+
 end Vector
 end
 

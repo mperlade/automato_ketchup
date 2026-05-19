@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.NatCDFA
+public import AutoKchp.CDFA
 import AutoKchp.Internal.Util
 
 

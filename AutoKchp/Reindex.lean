@@ -7,7 +7,11 @@ Authors: Marc Perlade
 module
 
 public import AutoKchp.CDFA
-public import AutoKchp.MorphismDfs
-public import AutoKchp.Minimize
-public import AutoKchp.Product
-public import AutoKchp.Search
+
+public section
+
+structure ReindexResult {a: Nat} (r: CDFA a) where
+  reindexed: NatCDFA a
+  correct: reindexed.accepts = r.accepts
+
+end

@@ -7,9 +7,36 @@ Authors: Marc Perlade
 module
 
 import AutoKchp.Internal.Util
+public import AutoKchp.FiniteHashable
 
 @[expose]
 public section
+
+structure CDFA (a: Nat) where
+  σ: Type
+  finite: FiniteHashable σ
+  δ: σ → Fin a → σ
+  i: σ
+  f: σ → Bool
+
+
+namespace CDFA
+
+def advanceFrom {a: Nat} (r: CDFA a) (q: r.σ): List (Fin a) → r.σ
+  | a::t => r.advanceFrom (r.δ q a) t
+  | [] => q
+
+
+def acceptsFrom {a: Nat} (r: CDFA a) (q: r.σ) (w: List (Fin a)): Bool :=
+  r.f (r.advanceFrom q w)
+
+
+def advance {a: Nat} (r: CDFA a): List (Fin a) → r.σ := r.advanceFrom r.i
+
+
+def accepts {a: Nat} (r: CDFA a): List (Fin a) → Bool := r.acceptsFrom r.i
+
+end CDFA
 
 structure NatCDFA (a: Nat) where
   n: Nat
@@ -83,6 +110,14 @@ def existsMorphism {a: Nat} (r s: NatCDFA a): Prop :=
 def minimal {a: Nat} (r: NatCDFA a): Prop :=
   ∀ s: NatCDFA a, s.accepts = r.accepts → NatCDFA.existsMorphism s r
 
+
+def toCDFA {a: Nat} (r: NatCDFA a): CDFA a := {
+  σ := Fin r.n
+  finite := inferInstance
+  δ := r.δ
+  i := r.i
+  f := r.f
+}
 
 end NatCDFA
 end

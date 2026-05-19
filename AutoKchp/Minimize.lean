@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.NatCDFA
+public import AutoKchp.CDFA
 import AutoKchp.Internal.Moore
 import AutoKchp.MorphismDfs
 import AutoKchp.Internal.Util
