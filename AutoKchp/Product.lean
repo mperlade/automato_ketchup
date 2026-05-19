@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.NatCDFA
+public import AutoKchp.CDFA
 
 
 theorem pack_lt {n m a b: Nat} (ha: a < n) (hb: b < m):

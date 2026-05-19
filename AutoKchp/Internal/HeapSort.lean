@@ -402,7 +402,7 @@ theorem siftFrom_sibling_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i: F
 
 
 theorem swap_lt_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j k: Fin n}
-  (h: heap v k) (hi: i < k) (hj: j < k):
+  (h: heap v k) (hi: i.val < k.val) (hj: j.val < k.val):
     heap (v.swap i j) k :=
   heap_only_descendants (fun p a =>
     have ine: i ≠ p := Fin.ne_of_val_ne (Nat.ne_of_lt (Nat.lt_of_lt_of_le hi (le_of_ancestor a)))
@@ -412,7 +412,7 @@ theorem swap_lt_heap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j k: Fin n}
 
 
 theorem swap_self_almostHeap {α} [TotalOrd α] {n: Nat} {v: Vector α n} {i j: Fin n}
-  (h: heap v j) (hi: i < j):
+  (h: heap v j) (hi: i.val < j.val):
     almostHeap (v.swap i j) j :=
   have h := Eq.mpr (heap.eq_def v j).symm h
   fun s hl => swap_lt_heap (h s hl).right (Nat.lt_trans hi lt_child) lt_child
@@ -869,7 +869,7 @@ public def canonicalize {α} [TotalOrd α] (v: Array α): Array α :=
   reconstruct (heapify v.toVector)
 
 
-theorem canonicalize_sorted {α} [TotalOrd α] {v: Array α}:
+theorem canonicalize_inv {α} [TotalOrd α] {v: Array α}:
     reconstructFromInvariant (canonicalize v) :=
   reconstruct_sorted (fun pos => heapify_correct ⟨0, pos⟩)
 
@@ -925,6 +925,11 @@ theorem of_reconstructFromInvariant {α} [TotalOrd α] {v: Array α}
   )
 
 
+public theorem canonicalize_sorted {α} [TotalOrd α] {v: Array α}:
+    (canonicalize v).toList.Pairwise (· < ·) :=
+  of_reconstructFromInvariant canonicalize_inv
+
+
 public theorem canonicalize_correct {α} [TotalOrd α] {v₁ v₂: Array α}:
     canonicalize v₁ = canonicalize v₂ ↔ (∀ a: α, a ∈ v₁ ↔ a ∈ v₂) :=
   ⟨
@@ -932,7 +937,11 @@ public theorem canonicalize_correct {α} [TotalOrd α] {v₁ v₂: Array α}:
     fun h => Array.toList_inj.mp (eq_of_sorted_mem
         (fun a => Array.mem_toList_iff.trans ((mem_canonicalize.trans
           ((h a).trans mem_canonicalize.symm)).trans Array.mem_toList_iff.symm))
-        (of_reconstructFromInvariant canonicalize_sorted)
-        (of_reconstructFromInvariant canonicalize_sorted)
+        canonicalize_sorted canonicalize_sorted
       )
   ⟩
+
+
+public theorem canonicalize_nodup {α} [TotalOrd α] {v: Array α}:
+    (canonicalize v).toList.Nodup :=
+  List.Pairwise.imp (fun lt => lt.right) canonicalize_sorted

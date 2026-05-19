@@ -6,6 +6,7 @@ Authors: Marc Perlade
 
 module
 
+@[expose]
 public section
 
 structure NatNFA (a: Nat) where
