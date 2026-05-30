@@ -6,6 +6,8 @@ Authors: Marc Perlade
 
 module
 
+public import Std.Data.HashMap
+
 @[expose]
 public section
 namespace List
@@ -392,13 +394,41 @@ end Array
 end
 
 
+public section
+namespace Std.HashMap
+
+theorem getElem?_insert_of_ne {α β} [BEq α] [LawfulBEq α] [Hashable α]
+  {s: Std.HashMap α β} {a₁ a₂: α} {b: β} (h: a₁ ≠ a₂):
+    (s.insert a₁ b)[a₂]? = s[a₂]? :=
+  getElem?_insert.trans (dif_neg ((Bool.not_eq_true _).mpr (beq_false_of_ne h)))
+
+
+theorem getElem_insert_of_ne {α β} [BEq α] [LawfulBEq α] [Hashable α]
+  {s: Std.HashMap α β} {a₁ a₂: α} {b: β} (h: a₁ ≠ a₂) (h1: a₂ ∈ (s.insert a₁ b)):
+    (s.insert a₁ b)[a₂] = s[a₂]'(mem_of_mem_insert h1 (beq_false_of_ne h)) :=
+  getElem_insert.trans (dif_neg ((Bool.not_eq_true _).mpr (beq_false_of_ne h)))
+
+
+theorem getElem?_eq_none_iff {α β} [BEq α] [LawfulBEq α] [Hashable α]
+  {s: Std.HashMap α β} {a: α}:
+    s[a]? = none ↔ ¬a ∈ s :=
+  ⟨
+    fun eq mem => Option.some_ne_none _
+      (((getElem?_eq_some_getElem_iff mem).mpr True.intro).symm.trans eq),
+    getElem?_eq_none
+  ⟩
+
+end Std.HashMap
+end
+
+
 @[expose]
 public section
 namespace Option
 
 variable {α}
 
-def allP (p: α → Prop): (o: Option α) → Prop
+def allP (p: α → Prop): Option α → Prop
   | none => True
   | some a => p a
 
@@ -407,6 +437,11 @@ theorem allP_mp {p q: α → Prop} {o: Option α} (h1: o.allP p) (h2: ∀ a: α,
   match o with
   | none => True.intro
   | some a => h2 a h1
+
+
+theorem allP_and {p q: α → Prop}: {o: Option α} → o.allP p ∧ o.allP q ↔ o.allP (fun a => p a ∧ q a)
+  | none => ⟨fun _ => True.intro, fun _ => ⟨True.intro, True.intro⟩⟩
+  | some _ => ⟨id, id⟩
 
 end Option
 end
@@ -434,6 +469,12 @@ theorem allP_mp {p q: α → Prop} {e: Except β α} (h1: e.allP p) (h2: ∀ a: 
   | Except.ok a => h2 a h1
 
 
+theorem allEP_mp {p q: β → Prop} {e: Except β α} (h1: e.allEP p) (h2: ∀ b: β, p b → q b): e.allEP q :=
+  match e with
+  | Except.error b => h2 b h1
+  | Except.ok _ => True.intro
+
+
 theorem allP_forall {ι} {p: ι → α → Prop}:
     {e: Except β α} → (∀ i, e.allP (p i)) ↔ (e.allP (fun a => ∀ i, p i a))
   | Except.error _ => ⟨fun _ => True.intro, fun _ _ => True.intro⟩
@@ -455,6 +496,39 @@ theorem pure_def {a: α}: (pure a: Except β α) = Except.ok a := rfl
 
 end Except
 end
+
+
+namespace List
+
+public theorem forM_error {α β} {f: α → Except β Unit}:
+    {l: List α} → (l.forM f).allEP (fun b => ∃ a: α, a ∈ l ∧ f a = Except.error b)
+  | [] => True.intro
+  | a::t => match eq: f a with
+    | Except.ok () =>
+      have h: (a::t).forM f = t.forM f := congrArg (fun w => w >>= fun _ => _) eq
+      h ▸ Except.allEP_mp (forM_error (l := t))
+        (fun _ => fun ⟨a, mem, eq2⟩ => ⟨a, List.mem_cons_of_mem _ mem, eq2⟩)
+    | Except.error b =>
+      have h: (a::t).forM f = Except.error b := congrArg (fun w => w >>= fun _ => _) eq
+      h ▸ ⟨a, List.mem_cons_self, eq⟩
+
+
+public theorem forM_ok {α β} {f: α → Except β Unit}:
+    {l: List α} → (l.forM f).allP (fun () => ∀ a: α, a ∈ l → f a = Except.ok ())
+  | [] => fun _ mem => False.elim (List.not_mem_nil mem)
+  | a::t => match eq: f a with
+    | Except.ok () =>
+      have h: (a::t).forM f = t.forM f := congrArg (fun w => w >>= fun _ => _) eq
+      h ▸ Except.allP_mp (forM_ok (l := t))
+        (fun _ => fun all_ok c mem => match List.mem_cons.mp mem with
+          | .inl eq2 => eq2 ▸ eq
+          | .inr mem => all_ok c mem
+        )
+    | Except.error b =>
+      have h: (a::t).forM f = Except.error b := congrArg (fun w => w >>= fun _ => _) eq
+      h ▸ True.intro
+
+end List
 
 
 public theorem Fin.foldl_induction {α} {n: Nat} (motive: α → Nat → Prop)
