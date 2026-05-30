@@ -13,3 +13,4 @@ public import AutoKchp.Product
 public import AutoKchp.Search
 public import AutoKchp.NatNFA
 public import AutoKchp.Determinize
+public import AutoKchp.Reindex
