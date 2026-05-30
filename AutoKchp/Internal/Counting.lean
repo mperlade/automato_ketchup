@@ -42,6 +42,19 @@ theorem card_eq_length_of_nodup {α} [DecidableEq α] {l: List α} (h: l.Nodup):
     congrArg (· + 1) (card_eq_length_of_nodup (nodup_cons.mp h).right)
 
 
+theorem nodup_of_card_eq_length {α} [DecidableEq α] {l: List α} (h: l.card = l.length):
+    l.Nodup :=
+  match l with
+  | [] => List.nodup_nil
+  | a::t => if mem: a ∈ t then
+      False.elim (Nat.not_le_of_lt (Nat.lt_succ_self _)
+        (Nat.le_trans (Nat.le_of_eq (h.symm.trans (if_pos mem))) card_le_length))
+    else List.nodup_cons.mpr ⟨
+      mem,
+      List.nodup_of_card_eq_length (Nat.add_right_cancel ((if_neg mem).symm.trans h))
+    ⟩
+
+
 theorem card_filter_of_mem {α} [DecidableEq α]  {a: α} {l: List α} (h: a ∈ l):
     (l.filter (fun x => decide (x ≠ a))).card + 1 = l.card :=
   match l with
@@ -175,6 +188,36 @@ theorem perm_length_eq {l: List Nat} {n: Nat} (h1: ∀ i: Nat, i < n ↔ i ∈ l
   Nat.le_antisymm
     (perm_length_at_most (fun i hi => (h1 i).mpr hi) h2)
     (perm_length_at_least (fun i hi => (h1 i).mp hi))
+
+
+def dedup {α} [DecidableEq α]: List α → List α
+  | [] => []
+  | h::t => if h ∈ t then dedup t else h::(dedup t)
+
+
+theorem mem_dedup {α} [DecidableEq α] {a: α}: {l: List α} → a ∈ dedup l ↔ a ∈ l
+  | [] => Iff.rfl
+  | h::t => iteInduction (motive := fun w => a ∈ w ↔ a ∈ h::t)
+    (fun mem => mem_dedup.trans ⟨
+      fun mem2 => mem_cons_of_mem _ mem2,
+      fun mem2 => match List.mem_cons.mp mem2 with
+        | .inl eq => eq ▸ mem | .inr mem2 => mem2
+    ⟩)
+    (fun _ => ⟨
+      fun mem2 => match List.mem_cons.mp mem2 with
+        | .inl eq => eq ▸ mem_cons_self
+        | .inr mem2 => mem_cons_of_mem _ (mem_dedup.mp mem2),
+      fun mem2 => match List.mem_cons.mp mem2 with
+        | .inl eq => eq ▸ mem_cons_self
+        | .inr mem2 => mem_cons_of_mem _ (mem_dedup.mpr mem2)
+    ⟩)
+
+
+theorem dedup_nodup {α} [DecidableEq α]: {l: List α} → (dedup l).Nodup
+  | [] => nodup_nil
+  | _::_ => iteInduction (fun _ => dedup_nodup)
+    (fun nmem => nodup_cons.mpr ⟨fun mem => nmem (mem_dedup.mp mem), dedup_nodup⟩)
+
 
 end List
 end
