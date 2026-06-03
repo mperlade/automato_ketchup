@@ -170,6 +170,10 @@ theorem get_replicate {a: α} {i: Fin k}: (replicate k a).get i = a :=
   Array.getElem_replicate lt
 
 
+theorem get_map {v: Vector α k} {β} {f: α → β} {i: Fin k}: (v.map f).get i = f (v.get i) :=
+  Vector.getElem_map f _
+
+
 theorem modify_modify_self {v: Vector α k} {i: Fin k} {f g: α → α}:
     (v.modify i f).modify i g = v.modify i (g ∘ f) :=
   get_ext (fun j =>
