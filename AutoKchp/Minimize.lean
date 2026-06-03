@@ -58,11 +58,6 @@ def invertNormalizedPartition {n: Nat} (p: Partition n) (h: p.normalized): Vecto
   (invertPartition p).attach.map (fun ⟨o, mem⟩ => o.get (isSome_of_mem_invertPartition_normalized h mem))
 
 
-theorem Vector.get_map {α β} {n: Nat} {v: Vector α n} {f: α → β} {i: Fin n}:
-    (v.map f).get i = f (v.get i) :=
-  Vector.getElem_map f i.isLt
-
-
 theorem Vector.val_get_attach {α} {n: Nat} {v: Vector α n} {i: Fin n}:
     (v.attach.get i).val = v.get i :=
   congrArg Subtype.val (Vector.getElem_attach i.isLt)
