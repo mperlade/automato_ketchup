@@ -15,7 +15,6 @@ structure NatEpsNFA (a: Nat) where
   i: Fin n → Bool
   f: Fin n → Bool
 
-
 namespace NatEpsNFA
 
 inductive path {a: Nat} (r: NatEpsNFA a): Fin r.n → Fin r.n → List (Fin a) → Prop where
