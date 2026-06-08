@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.NatNFA
+public import AutoKchp.NFA
 public import AutoKchp.NatEpsNFA
 import AutoKchp.Internal.Util
 import AutoKchp.Internal.Warshall

@@ -20,10 +20,10 @@ structure CDFA (a: Nat) where
   f: σ → Bool
 
 
+namespace CDFA
+
 instance {a: Nat} {r: CDFA a}: FiniteHashable r.σ := r.finite
 
-
-namespace CDFA
 
 def advanceFrom {a: Nat} (r: CDFA a) (q: r.σ): List (Fin a) → r.σ
   | a::t => r.advanceFrom (r.δ q a) t

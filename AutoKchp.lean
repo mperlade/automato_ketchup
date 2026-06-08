@@ -11,7 +11,8 @@ public import AutoKchp.MorphismDfs
 public import AutoKchp.Minimize
 public import AutoKchp.Product
 public import AutoKchp.Search
-public import AutoKchp.NatNFA
+public import AutoKchp.NFA
 public import AutoKchp.Determinize
-public import AutoKchp.Reindex
+public import AutoKchp.ReindexCDFA
 public import AutoKchp.RemoveEps
+public import AutoKchp.ReindexNFA

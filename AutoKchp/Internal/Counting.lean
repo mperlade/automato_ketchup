@@ -6,6 +6,8 @@ Authors: Marc Perlade
 
 module
 
+public import Std.Data.HashMap
+
 @[expose]
 public section
 namespace List
@@ -220,4 +222,33 @@ theorem dedup_nodup {α} [DecidableEq α]: {l: List α} → (dedup l).Nodup
 
 
 end List
+
+
+theorem hashmap_counting_inj {α} [Hashable α] [BEq α] [LawfulBEq α] {m: Std.HashMap α Nat}
+  (h: ∀ i: Nat, i < m.size ↔ ∃ p: α, m[p]? = some i):
+    ∀ p q: α, (hp: p ∈ m) → (hq: q ∈ m) → m[p] = m[q] → p = q :=
+  let values := m.toList.map Prod.snd
+  have hl: values.length = m.toList.length := List.length_map _
+  have hl2: values.length = m.size := hl.trans Std.HashMap.length_toList
+  have hv: values.Nodup := List.nodup_of_card_eq_length (Nat.le_antisymm
+    (List.card_at_most (fun i hi => have ⟨(p, i2), mem, eq⟩ := List.mem_map.mp hi
+      hl2 ▸ ((h i).mpr ⟨p, Std.HashMap.mem_toList_iff_getElem?_eq_some.mp (eq ▸ mem)⟩)))
+    (List.card_at_least (fun i hi => have ⟨p, hp⟩ := (h i).mp (hl2 ▸ hi)
+      List.mem_map.mpr ⟨(p, i), Std.HashMap.mem_toList_iff_getElem?_eq_some.mpr hp, rfl⟩))
+  )
+  fun p q hp hq hpq =>
+    have memp: (p, m[p]) ∈ m.toList :=
+      Std.HashMap.mem_toList_iff_getElem?_eq_some.mpr (Std.HashMap.getElem?_eq_some_getElem hp)
+    have memq: (q, m[q]) ∈ m.toList :=
+      Std.HashMap.mem_toList_iff_getElem?_eq_some.mpr (Std.HashMap.getElem?_eq_some_getElem hq)
+    have ⟨i, hi, eqi⟩ := List.getElem_of_mem memp
+    have ⟨j, hj, eqj⟩ := List.getElem_of_mem memq
+    have eqi2: values[i] = m[p] := List.getElem_map _ ▸ congrArg Prod.snd eqi
+    have eqj2: values[j] = m[q] := List.getElem_map _ ▸ congrArg Prod.snd eqj
+    have eqij: values[i] = values[j] := (eqi2.trans hpq).trans eqj2.symm
+    match Nat.lt_trichotomy i j with
+      | .inl lt => False.elim (List.pairwise_iff_getElem.mp hv i j _ _ lt eqij)
+      | .inr (.inr lt) => False.elim (List.pairwise_iff_getElem.mp hv j i _ _ lt eqij.symm)
+      | .inr (.inl eq) => congrArg Prod.fst ((eqi.symm.trans (getElem_congr_idx eq)).trans eqj)
+
 end

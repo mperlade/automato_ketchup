@@ -12,7 +12,7 @@ public section
 structure NatEpsNFA (a: Nat) where
   n: Nat
   δ: Fin n → Option (Fin a) → (Array (Fin n))
-  i: Fin n → Bool
+  i: Array (Fin n)
   f: Fin n → Bool
 
 namespace NatEpsNFA
@@ -33,7 +33,7 @@ theorem join_paths {a: Nat} {r: NatEpsNFA a} {i j k: Fin r.n} {u v: List (Fin a)
 
 
 def successfulPath {a: Nat} (r: NatEpsNFA a) (p q: Fin r.n) (l: List (Fin a)): Prop :=
-  r.path p q l ∧ r.i p ∧ r.f q
+  r.path p q l ∧ p ∈ r.i ∧ r.f q
 
 
 def accepts {a: Nat} (r: NatEpsNFA a) (l: List (Fin a)): Prop :=

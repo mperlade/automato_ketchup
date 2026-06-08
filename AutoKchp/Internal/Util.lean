@@ -233,6 +233,11 @@ theorem get_mem {v: Vector α k} {i: Fin k}: v.get i ∈ v :=
     Vector.getElem_mem i.isLt
 
 
+theorem get_pmap {v: Vector α k} {β} {p: α → Prop} {f: (a: α) → p a → β} (h: ∀ a: α, a ∈ v → p a) {i: Fin k}:
+    (v.pmap f h).get i = f (v.get i) (h _ get_mem) :=
+  Vector.getElem_pmap f h i.isLt
+
+
 theorem exists_get_of_mem {v: Vector α k} {a: α} (h: a ∈ v):
     ∃ i: Fin k, a = v.get i :=
   have ⟨i, hi, hvi⟩ := Vector.mem_iff_getElem.mp h; ⟨⟨i, hi⟩, hvi.symm⟩

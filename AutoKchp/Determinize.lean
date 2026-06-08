@@ -6,7 +6,7 @@ Authors: Marc Perlade
 
 module
 
-public import AutoKchp.NatNFA
+public import AutoKchp.NFA
 public import AutoKchp.CDFA
 import AutoKchp.Internal.HeapSort
 import AutoKchp.Internal.Counting
@@ -14,7 +14,7 @@ import AutoKchp.Internal.Util
 
 
 def powerInitial {a: Nat} (r: NatNFA a): Array (Fin r.n) :=
-  canonicalize (Fin.foldl r.n (fun acc q => if r.i q then acc.push q else acc) #[])
+  canonicalize r.i
 
 
 def powerDelta {a: Nat} (r: NatNFA a) (p: Array (Fin r.n)) (b: Fin a):
@@ -27,29 +27,8 @@ def powerFinal {a: Nat} (r: NatNFA a): Array (Fin r.n) → Bool :=
 
 
 theorem mem_powerInitial {a: Nat} {r: NatNFA a} {p: Fin r.n}:
-    p ∈ powerInitial r ↔ r.i p :=
-  mem_canonicalize.trans (
-    let motive (acc: Array (Fin r.n)) (j: Nat) := p ∈ acc ↔ p < j ∧ r.i p
-    have ind: motive (Fin.foldl r.n (fun acc q => if r.i q then acc.push q else acc) #[]) r.n :=
-      Fin.foldl_induction motive
-        ⟨fun mem => False.elim (Array.not_mem_empty p mem),
-          fun ⟨lt, _⟩ => False.elim (Nat.not_lt_zero p lt)⟩
-        fun _ i hrec => iteInduction (motive := fun w => motive w (i + 1))
-          (fun pos => Array.mem_push.trans ⟨
-            fun
-              | .inl mem => have ⟨lt, pos⟩ := hrec.mp mem; ⟨Nat.lt_succ_of_lt lt, pos⟩
-              | .inr eq => ⟨eq ▸ Nat.lt_succ_self i, eq ▸ pos⟩,
-            fun ⟨lt, pos2⟩ => match Nat.lt_or_eq_of_le (Nat.le_of_lt_succ lt) with
-              | .inl lt => Or.inl (hrec.mpr ⟨lt, pos2⟩)
-              | .inr eq => Or.inr (Fin.eq_of_val_eq eq)
-          ⟩)
-          (fun neg => ⟨
-            fun mem => have ⟨lt, pos⟩ := hrec.mp mem; ⟨Nat.lt_succ_of_lt lt, pos⟩,
-            fun ⟨lt, pos⟩ => hrec.mpr ⟨Nat.lt_of_le_of_ne (Nat.le_of_lt_succ lt)
-              (fun eq => neg ((Fin.eq_of_val_eq eq) ▸ pos)), pos⟩
-          ⟩)
-    ⟨And.right ∘ ind.mp, ind.mpr ∘ (fun pos => ⟨p.isLt, pos⟩)⟩
-  )
+    p ∈ powerInitial r ↔ p ∈ r.i :=
+  mem_canonicalize
 
 
 theorem mem_powerDelta {a: Nat} {r: NatNFA a} {v: Array (Fin r.n)} {b: Fin a} {p: Fin r.n}:
@@ -232,7 +211,7 @@ theorem constructPower_path {a: Nat} {r: NatNFA a} {f: Fin r.n} {v: Array (Fin r
 
 
 theorem constructPower_path_initial {a: Nat} {r: NatNFA a} {f: Fin r.n} {l: List (Fin a)}:
-    (∃ i: Fin r.n, r.i i ∧ r.path i f l) ↔ f ∈ ((constructPower r).advance l).val :=
+    (∃ i: Fin r.n, i ∈ r.i ∧ r.path i f l) ↔ f ∈ ((constructPower r).advance l).val :=
   Iff.trans ⟨
     fun ⟨i, pos, path⟩ => ⟨i, mem_powerInitial.mpr pos, path⟩,
     fun ⟨i, mem, path⟩ => ⟨i, mem_powerInitial.mp mem, path⟩
