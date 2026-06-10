@@ -15,16 +15,18 @@ import AutoKchp.Internal.HeapSort
 
 def collectEpsilon {a: Nat} (r: NatEpsNFA a): Vector (Vector Bool r.n) r.n :=
   Vector.ofFn (fun i =>
-    (r.δ i none).foldl (fun acc (j: Fin r.n) => acc.set j true) ((Vector.replicate r.n false).set i true)
+    (r.δ i NatEpsNFA.ε).foldl
+      (fun acc (j: Fin r.n) => acc.set j true)
+      ((Vector.replicate r.n false).set i true)
   )
 
 
 theorem collectEpsilon_correct {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
-    ((collectEpsilon r).get i).get j ↔ j = i ∨ j ∈ r.δ i none :=
+    ((collectEpsilon r).get i).get j ↔ j = i ∨ j ∈ r.δ i NatEpsNFA.ε :=
   Vector.get_ofFn ▸ (
     let motive (p: Nat) (acc: Vector Bool r.n): Prop :=
-      acc.get j ↔ j = i ∨ (∃ q: Nat, q < p ∧ some j = (r.δ i none)[q]?)
-    have ind: motive (r.δ i none).size ((r.δ i none).foldl (fun acc (j: Fin r.n) => acc.set j true)
+      acc.get j ↔ j = i ∨ (∃ q: Nat, q < p ∧ some j = (r.δ i NatEpsNFA.ε)[q]?)
+    have ind: motive (r.δ i NatEpsNFA.ε).size ((r.δ i NatEpsNFA.ε).foldl (fun acc (j: Fin r.n) => acc.set j true)
         ((Vector.replicate r.n false).set i true)) := Array.foldl_induction motive
       ⟨
         fun h => if eq: j = i then Or.inl eq else
@@ -33,14 +35,15 @@ theorem collectEpsilon_correct {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
         fun h => have eq: j = i := h.resolve_right (fun ⟨q, hq, _⟩ => Nat.not_lt_zero q hq)
           eq ▸ Vector.get_set_self,
       ⟩
-      (fun p acc hrec => if eq: (r.δ i none)[p] = j then
+      (fun p acc hrec => if eq: (r.δ i NatEpsNFA.ε)[p] = j then
         ⟨
           fun _ => have eq2 := Array.getElem?_eq_some_iff.mpr ⟨_, eq⟩
             Or.inr ⟨p, Nat.lt_succ_self p, eq2.symm⟩,
           fun _ => eq ▸ Vector.get_set_self
         ⟩
       else
-        have concl: (acc.set (r.δ i none)[p] true).get j ↔ j = i ∨ ∃ q, q < p.val + 1 ∧ some j = (r.δ i none)[q]? :=
+        have concl: (acc.set (r.δ i NatEpsNFA.ε)[p] true).get j ↔
+            j = i ∨ ∃ q, q < p.val + 1 ∧ some j = (r.δ i NatEpsNFA.ε)[q]? :=
           (Vector.get_set_of_ne eq).symm ▸ hrec.trans (or_congr_right ⟨
             fun ⟨q, hq, eq2⟩ => ⟨q, Nat.lt_succ_of_lt hq, eq2⟩,
             fun ⟨q, hq, eq2⟩ => ⟨q, (Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hq)).resolve_right
@@ -64,7 +67,7 @@ def epsilonClosureTable {a: Nat} (r: NatEpsNFA a): Vector (Vector Bool r.n) r.n 
 
 inductive epsilonPath {a: Nat} (r: NatEpsNFA a): Fin r.n → Fin r.n → Prop where
   | refl (i: Fin r.n): epsilonPath r i i
-  | eps {i j k: Fin r.n}: j ∈ r.δ i none → epsilonPath r j k → epsilonPath r i k
+  | eps {i j k: Fin r.n}: j ∈ r.δ i NatEpsNFA.ε → epsilonPath r j k → epsilonPath r i k
 
 
 theorem epsilonPath_trans {a: Nat} {r: NatEpsNFA a} {i j k: Fin r.n} (h: epsilonPath r j k):
@@ -130,17 +133,17 @@ theorem epsilonClosure_correct {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
 def newTransitions {a: Nat} (r: NatEpsNFA a) (ec: Vector (Array (Fin r.n)) r.n):
     Vector (Vector (Array (Fin r.n)) a) r.n :=
   ec.map (fun cl => Vector.ofFn (fun b => canonicalize (
-    cl.foldl (fun acc i => acc.append (r.δ i (some b))) #[]
+    cl.foldl (fun acc i => acc.append (r.δ i (NatEpsNFA.char b))) #[]
   )))
 
 
 theorem newTransitions_correct {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n} {b: Fin a}
   {ec: Vector (Array (Fin r.n)) r.n} (h: ∀ u v: Fin r.n, v ∈ ec.get u ↔ epsilonPath r u v):
-    j ∈ ((newTransitions r ec).get i).get b ↔ ∃ u: Fin r.n, epsilonPath r i u ∧ j ∈ r.δ u (some b) :=
+    j ∈ ((newTransitions r ec).get i).get b ↔ ∃ u: Fin r.n, epsilonPath r i u ∧ j ∈ r.δ u (NatEpsNFA.char b) :=
   let motive (k: Nat) (acc: Array (Fin r.n)): Prop :=
-      j ∈ acc ↔ ∃ u: Fin r.n, (∃ z: Nat, z < k ∧ (ec.get i)[z]? = some u) ∧ j ∈ r.δ u (some b)
+      j ∈ acc ↔ ∃ u: Fin r.n, (∃ z: Nat, z < k ∧ (ec.get i)[z]? = some u) ∧ j ∈ r.δ u (NatEpsNFA.char b)
   have ind: motive (ec.get i).size
-      ((ec.get i).foldl (fun acc k => acc.append (r.δ k (some b))) #[]) :=
+      ((ec.get i).foldl (fun acc k => acc.append (r.δ k (NatEpsNFA.char b))) #[]) :=
     Array.foldl_induction motive
       ⟨
         fun mem => False.elim (Array.not_mem_empty _ mem),
@@ -186,39 +189,63 @@ theorem newFinal_correct {a: Nat} {r: NatEpsNFA a} {i: Fin r.n}
 
 theorem path_of_epsilonPath {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
     epsilonPath r i j → r.path i j []
-  | epsilonPath.refl i => NatEpsNFA.path.refl i
-  | epsilonPath.eps h1 h2 => NatEpsNFA.path.eps h1 (path_of_epsilonPath h2)
+  | epsilonPath.refl i => ⟨[], rfl, rfl⟩
+  | epsilonPath.eps (j := j) h1 h2 =>
+    have ⟨l, hl1, hl2⟩ := path_of_epsilonPath h2
+    ⟨NatEpsNFA.ε::l, hl1.trans NatEpsNFA.extractWord_cons_ε.symm,
+      ⟨j, h1, hl2⟩⟩
 
 
-theorem path_nil {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n} {l: List (Fin a)} (h: l = []):
-    r.path i j l → epsilonPath r i j
-  | NatEpsNFA.path.refl i => epsilonPath.refl i
-  | NatEpsNFA.path.eps h1 h2 => epsilonPath.eps h1 (path_nil h h2)
+theorem epsilonPath_of_path {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
+    r.path i j [] → epsilonPath r i j :=
+  fun ⟨l, hl1, hl2⟩ =>
+    let rec ind {i j: Fin r.n}:
+        (l: List (Fin (a + 1))) → [] = NatEpsNFA.extractWord l →
+        NatNFA.path r i j l → epsilonPath r i j
+      | [] => fun _ eq => eq ▸ epsilonPath.refl i
+      | b::t => fun h1 ⟨_, hk1, hk2⟩ => if eq: b = NatEpsNFA.ε then
+          epsilonPath.eps (eq ▸ hk1) (ind t
+            (NatEpsNFA.extractWord_cons_ε ▸ (eq ▸ h1)) hk2)
+        else nomatch (h1.trans (dif_neg eq))
+    ind l hl1 hl2
 
 
-theorem path_nil' {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
+theorem path_nil {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}:
     r.path i j [] ↔ epsilonPath r i j :=
   ⟨
-    path_nil rfl,
+    epsilonPath_of_path,
     path_of_epsilonPath,
   ⟩
 
 
-theorem path_cons {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n} {l: List (Fin a)}
-  {b: Fin a} {t: List (Fin a)} (h: l = b::t):
-    r.path i j l → ∃ u v: Fin r.n, epsilonPath r i u ∧ v ∈ r.δ u (some b) ∧ r.path v j t
-  | NatEpsNFA.path.trans (u := k) h1 h2 =>
-    ⟨i, k, epsilonPath.refl i, List.head_eq_of_cons_eq h ▸ h1, List.tail_eq_of_cons_eq h ▸ h2⟩
-  | NatEpsNFA.path.eps h1 h2 => have ⟨u, v, h3, h4, h5⟩ := path_cons h h2
-    ⟨u, v, epsilonPath.eps h1 h3, h4, h5⟩
+theorem path_cons {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}
+  {b: Fin a} {t: List (Fin a)}:
+    r.path i j (b::t) → ∃ u v: Fin r.n, epsilonPath r i u ∧
+      v ∈ r.δ u (NatEpsNFA.char b) ∧ r.path v j t :=
+  fun ⟨l, hl1, hl2⟩ =>
+    let rec ind {i j: Fin r.n}:
+        (l: List (Fin (a + 1))) → b::t = NatEpsNFA.extractWord l →
+        NatNFA.path r i j l → ∃ u v: Fin r.n, epsilonPath r i u ∧
+        v ∈ r.δ u (NatEpsNFA.char b) ∧ r.path v j t
+      | [] => fun h => nomatch h
+      | c::u => fun h1 ⟨k, hk1, hk2⟩ => if eq: c = NatEpsNFA.ε then
+          have ⟨a, b, hr1, hr2, hr3⟩ := ind u
+            (NatEpsNFA.extractWord_cons_ε ▸ (eq ▸ h1)) hk2
+          ⟨a, b, epsilonPath.eps (eq ▸ hk1) hr1, hr2, hr3⟩
+        else
+          have eq2 := h1.trans (dif_neg eq)
+          ⟨i, k, epsilonPath.refl i, List.head_eq_of_cons_eq eq2 ▸ hk1,
+            List.tail_eq_of_cons_eq eq2 ▸ ⟨u, rfl, hk2⟩⟩
+    ind l hl1 hl2
 
 
 theorem path_cons' {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n} {b: Fin a} {t: List (Fin a)}:
-    r.path i j (b::t) ↔ ∃ u v: Fin r.n, epsilonPath r i u ∧ v ∈ r.δ u (some b) ∧ r.path v j t :=
+    r.path i j (b::t) ↔ ∃ u v: Fin r.n, epsilonPath r i u ∧
+      v ∈ r.δ u (NatEpsNFA.char b) ∧ r.path v j t :=
   ⟨
-    path_cons rfl,
-    fun ⟨_, _, h1, h2, h3⟩ => NatEpsNFA.join_paths (path_of_epsilonPath h1)
-      (NatEpsNFA.path.trans h2 h3)
+    path_cons,
+    fun ⟨_, _, h1, h2, ⟨w, hw1, hw2⟩⟩ => NatEpsNFA.join_paths (path_of_epsilonPath h1)
+      ⟨(NatEpsNFA.char b)::w, hw1 ▸ NatEpsNFA.extractWord_cons_char.symm, ⟨_, h2, hw2⟩⟩
   ⟩
 
 
@@ -236,7 +263,7 @@ theorem newTransitions_correct2 {a: Nat} {r: NatEpsNFA a} {i j: Fin r.n}
 theorem newFinal_correct2 {a: Nat} {r: NatEpsNFA a} {i: Fin r.n}
   {ec: Vector (Array (Fin r.n)) r.n} (h: ∀ u v: Fin r.n, v ∈ ec.get u ↔ epsilonPath r u v):
     (∃ j: Fin r.n, r.path i j [] ∧ r.f j) ↔ (newFinal r ec).get i :=
-  Iff.trans (exists_congr (fun _ => and_congr_left' path_nil')) (newFinal_correct h).symm
+  Iff.trans (exists_congr (fun _ => and_congr_left' path_nil)) (newFinal_correct h).symm
 
 
 def constructNFA {a: Nat} (r: NatEpsNFA a): NatNFA a :=
